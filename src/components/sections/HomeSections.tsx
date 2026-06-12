@@ -187,7 +187,9 @@ export default function HomeSections() {
       </section>
 
       {/* beat 4 — telemetry */}
-      <section className="relative border-y hairline bg-bg/60 backdrop-blur-sm" aria-label="Telemetry">
+      {/* no backdrop-blur here: blurring a region over the always-animating
+          canvas re-filters it every frame — near-opaque bg reads the same */}
+      <section className="relative border-y hairline bg-bg/85" aria-label="Telemetry">
         <div className="mx-auto grid max-w-6xl grid-cols-2 gap-px md:grid-cols-4">
           {STATS.map((s) => (
             <Reveal key={s.label} className="px-5 py-10">

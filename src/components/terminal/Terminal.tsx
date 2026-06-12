@@ -122,7 +122,7 @@ export default function Terminal({ mode }: { mode: "palette" | "inline" }) {
       role={isPalette ? "dialog" : "group"}
       aria-modal={isPalette || undefined}
       aria-label="Command terminal"
-      className="flex w-full max-w-2xl flex-col overflow-hidden rounded-lg border hairline bg-elev/95 font-mono text-[13px] shadow-2xl shadow-black/60 backdrop-blur"
+      className="flex w-full max-w-2xl flex-col overflow-hidden rounded-lg border hairline bg-elev/95 font-mono text-[13px] shadow-2xl shadow-black/60"
       onKeyDown={(e) => e.key === "Escape" && isPalette && setOpen(false)}
     >
       <div className="flex items-center gap-2 border-b hairline px-4 py-2 text-xs text-muted">
@@ -184,7 +184,7 @@ export default function Terminal({ mode }: { mode: "palette" | "inline" }) {
     <div className="fixed inset-0 z-50 flex items-start justify-center px-4 pt-[12vh]">
       <button
         aria-label="Close terminal"
-        className="absolute inset-0 cursor-default bg-black/60 backdrop-blur-[2px]"
+        className="absolute inset-0 cursor-default bg-black/70"
         onClick={() => setOpen(false)}
         tabIndex={-1}
       />
