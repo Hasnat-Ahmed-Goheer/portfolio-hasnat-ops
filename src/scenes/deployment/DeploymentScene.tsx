@@ -26,6 +26,9 @@ export default function DeploymentScene() {
   const podsRef = useRef<THREE.InstancedMesh>(null);
   const coreRef = useRef<THREE.Mesh>(null);
   const dummy = useMemo(() => new THREE.Object3D(), []);
+  /* terminal-egg shock: pods + core flare, then settle */
+  const shock = useRef(0);
+  const lastDisturb = useRef(0);
 
   /* closed loop track for the "rail" motif */
   const railCurve = useMemo(() => {
@@ -43,24 +46,34 @@ export default function DeploymentScene() {
     return new THREE.CatmullRomCurve3(pts, true);
   }, []);
 
-  useFrame((state) => {
+  useFrame((state, delta) => {
     const mesh = podsRef.current;
     if (!mesh) return;
     const t = state.clock.elapsedTime;
+    const dt = Math.min(delta, 0.05);
+    const store = useSceneStore.getState();
+
+    if (store.disturb !== lastDisturb.current) {
+      lastDisturb.current = store.disturb;
+      shock.current = 1;
+    }
+    shock.current *= Math.exp(-2.4 * dt);
+    const flare = 1 + shock.current * 0.55;
 
     for (let i = 0; i < count; i++) {
       const f = i / count;
       placePod(dummy, motif, f, i, t, railCurve);
+      dummy.scale.multiplyScalar(flare);
       dummy.updateMatrix();
       mesh.setMatrixAt(i, dummy.matrix);
     }
     mesh.instanceMatrix.needsUpdate = true;
 
     if (coreRef.current) {
-      coreRef.current.rotation.y = t * 0.25;
+      coreRef.current.rotation.y = t * 0.25 + shock.current * 2.5;
       coreRef.current.rotation.x = Math.sin(t * 0.2) * 0.3;
       const pulse = motif === "pulse" ? 1 + Math.sin(t * 2.2) * 0.12 : 1;
-      coreRef.current.scale.setScalar(pulse);
+      coreRef.current.scale.setScalar(pulse * flare);
     }
   });
 
@@ -86,6 +99,8 @@ export default function DeploymentScene() {
     </group>
   );
 }
+
+const AHEAD = new THREE.Vector3();
 
 function placePod(
   dummy: THREE.Object3D,
@@ -115,8 +130,9 @@ function placePod(
     case "rail": {
       const at = (f + t * 0.04) % 1;
       rail.getPointAt(at, dummy.position);
-      const ahead = rail.getPointAt((at + 0.01) % 1);
-      dummy.lookAt(ahead);
+      /* scratch target — getPointAt without one allocates per pod/frame */
+      rail.getPointAt((at + 0.01) % 1, AHEAD);
+      dummy.lookAt(AHEAD);
       dummy.scale.set(1.6, 0.8, 0.8);
       break;
     }

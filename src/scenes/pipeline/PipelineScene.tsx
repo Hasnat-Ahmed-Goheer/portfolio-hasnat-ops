@@ -46,6 +46,9 @@ export default function PipelineScene({ dim = false }: { dim?: boolean }) {
   const colors = themes[theme];
   const packetsRef = useRef<THREE.InstancedMesh>(null);
   const boosts = useRef(new Float32Array(TUBES));
+  /* terminal-egg shock: surges every stream, then decays */
+  const shock = useRef(0);
+  const lastDisturb = useRef(0);
 
   const { curves, geos, mats } = useMemo(() => {
     const rng = mulberry32(11);
@@ -100,15 +103,22 @@ export default function PipelineScene({ dim = false }: { dim?: boolean }) {
   useFrame((state, delta) => {
     const dt = Math.min(delta, 0.05);
     const t = state.clock.elapsedTime;
-    const active = useSceneStore.getState().activeProject;
+    const store = useSceneStore.getState();
+    const active = store.activeProject;
     const activeTube = active >= 0 ? active % TUBES : -1;
+
+    if (store.disturb !== lastDisturb.current) {
+      lastDisturb.current = store.disturb;
+      shock.current = 1;
+    }
+    shock.current *= Math.exp(-2.2 * dt);
 
     for (let k = 0; k < TUBES; k++) {
       const target = k === activeTube ? 1 : 0;
       boosts.current[k] += (target - boosts.current[k]) * 0.1;
       const u = mats[k].uniforms;
-      u.uTime.value += dt * (dim ? 0.45 : 1);
-      u.uBoost.value = boosts.current[k];
+      u.uTime.value += dt * (dim ? 0.45 : 1) * (1 + shock.current * 3);
+      u.uBoost.value = Math.min(boosts.current[k] + shock.current, 1.2);
       u.uOpacity.value = dim ? 0.35 : 0.95;
       const c = k % 4 === 3 ? colors.accent3 : colors.accent;
       (u.uColor.value as THREE.Color).set(c);
@@ -122,9 +132,10 @@ export default function PipelineScene({ dim = false }: { dim?: boolean }) {
         for (let p = 0; p < PACKETS; p++) {
           const speed = (dim ? 0.018 : 0.045) * (1 + k * 0.13);
           const at = (t * speed + p / PACKETS + k * 0.21) % 1;
-          const pos = curves[k].getPointAt(at);
-          dummy.position.copy(pos);
-          const s = 0.05 * (1 + boosts.current[k] * 1.2);
+          /* write straight into dummy.position — getPointAt without a
+             target allocates a Vector3 per packet per frame */
+          curves[k].getPointAt(at, dummy.position);
+          const s = 0.05 * (1 + boosts.current[k] * 1.2 + shock.current * 0.8);
           dummy.scale.setScalar(s);
           dummy.updateMatrix();
           mesh.setMatrixAt(i++, dummy.matrix);

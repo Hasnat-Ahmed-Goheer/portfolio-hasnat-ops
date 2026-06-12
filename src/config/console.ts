@@ -33,7 +33,7 @@ export const bootLines = [
 
 /** Per-scene tunables (counts auto-reduced on low-power devices). */
 export const sceneParams = {
-  cluster: { nodes: 110, linkDist: 2.6, mobileNodes: 56 },
+  cluster: { nodes: 110, linkDist: 2.6, mobileNodes: 56, packets: 16, mobilePackets: 8 },
   latent: { points: 42000, mobilePoints: 14000, clusters: 5 },
   pipeline: { tubes: 5, packetsPerTube: 3 },
   deployment: { pods: 14, mobilePods: 8 },

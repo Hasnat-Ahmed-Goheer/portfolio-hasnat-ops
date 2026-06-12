@@ -20,6 +20,7 @@ const VERT = /* glsl */ `
 uniform float uTime;
 uniform float uMorph;
 uniform float uActive;
+uniform float uShock;
 uniform vec3 uPointer;
 uniform float uSize;
 attribute vec3 aTarget;
@@ -39,14 +40,17 @@ void main() {
 
   vec3 d = pos - uPointer;
   float dist = length(d);
-  pos += normalize(d + 0.0001) * smoothstep(1.4, 0.0, dist) * 0.7;
+  pos += normalize(d + 0.0001) * smoothstep(1.6, 0.0, dist) * 0.85;
+
+  /* terminal-egg shockwave: the whole field breathes outward, then settles */
+  pos += normalize(pos + 0.0001) * uShock * (0.3 + aRand * 0.5);
 
   float active = uActive < -0.5 ? 0.0 : step(abs(aCluster - uActive), 0.4);
   vActive = active;
   vFade = uActive < -0.5 ? 1.0 : mix(0.22, 1.0, active);
 
   vec4 mv = modelViewMatrix * vec4(pos, 1.0);
-  gl_PointSize = uSize * (0.5 + aRand) * (1.0 + active * 0.9) * (220.0 / -mv.z);
+  gl_PointSize = uSize * (0.5 + aRand) * (1.0 + active * 0.9 + uShock * 0.6) * (220.0 / -mv.z);
   gl_Position = projectionMatrix * mv;
 }
 `;
@@ -60,7 +64,7 @@ varying float vTwinkle;
 
 void main() {
   float d = length(gl_PointCoord - 0.5);
-  float a = smoothstep(0.5, 0.08, d) * 0.5 * vFade * vTwinkle;
+  float a = smoothstep(0.5, 0.08, d) * 0.62 * vFade * vTwinkle;
   if (a < 0.01) discard;
   vec3 col = mix(uColor, uColorActive, vActive);
   gl_FragColor = vec4(col, a);
@@ -83,6 +87,8 @@ export default function LatentScene({
   const matRef = useRef<THREE.ShaderMaterial>(null);
   const groupRef = useRef<THREE.Group>(null);
   const tmp = useMemo(() => new THREE.Vector3(), []);
+  const shock = useRef(0);
+  const lastDisturb = useRef(0);
 
   const geometry = useMemo(() => {
     const rng = mulberry32(7);
@@ -127,8 +133,9 @@ export default function LatentScene({
       uTime: { value: 0 },
       uMorph: { value: 0 },
       uActive: { value: -1 },
+      uShock: { value: 0 },
       uPointer: { value: new THREE.Vector3(99, 99, 99) },
-      uSize: { value: 2.6 },
+      uSize: { value: 3.2 },
       uColor: { value: new THREE.Color("#8b5cf6") },
       uColorActive: { value: new THREE.Color("#22d3ee") },
     }),
@@ -148,6 +155,14 @@ export default function LatentScene({
 
     const targetMorph = variant === "lab" ? 0 : store.progress;
     u.uMorph.value += (targetMorph - u.uMorph.value) * 0.06;
+
+    /* terminal eggs ripple the field */
+    if (store.disturb !== lastDisturb.current) {
+      lastDisturb.current = store.disturb;
+      shock.current = 1;
+    }
+    shock.current *= Math.exp(-2 * Math.min(delta, 0.05));
+    u.uShock.value = shock.current;
 
     const idx = skillGroups.findIndex((g) => g.id === store.activeSkillGroup);
     u.uActive.value = variant === "lab" ? -1 : idx;
