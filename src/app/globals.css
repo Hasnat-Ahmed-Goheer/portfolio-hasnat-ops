@@ -1,0 +1,130 @@
+@import "tailwindcss";
+
+/* ---- design tokens (mirrors src/config/theme.ts) ---- */
+:root {
+  --bg: #0a0e14;
+  --bg-elev: #0e141d;
+  --text: #e6edf3;
+  --muted: #8b98a9;
+  --line: rgba(230, 237, 243, 0.08);
+  --accent: #22d3ee;
+  --accent2: #f59e0b;
+  --accent3: #8b5cf6;
+  --ok: #34d399;
+  --danger: #f87171;
+}
+
+[data-theme="phosphor"] {
+  --bg: #050805;
+  --bg-elev: #0a120a;
+  --text: #d8f3d8;
+  --muted: #6fa86f;
+  --line: rgba(216, 243, 216, 0.1);
+  --accent: #4ade80;
+  --accent2: #facc15;
+  --accent3: #a3e635;
+  --ok: #4ade80;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-elev: var(--bg-elev);
+  --color-text: var(--text);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-accent2: var(--accent2);
+  --color-accent3: var(--accent3);
+  --color-ok: var(--ok);
+  --color-danger: var(--danger);
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, "SF Mono", monospace;
+}
+
+html {
+  background: var(--bg);
+  color-scheme: dark;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  overflow-x: clip;
+}
+
+::selection {
+  background: var(--accent);
+  color: var(--bg);
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--muted) transparent;
+}
+
+/* hairline rule used across sections */
+.hairline {
+  border-color: var(--line);
+}
+
+/* mono section label, e.g. SYS://CLUSTER */
+.sys-label {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+/* blinking terminal caret */
+@keyframes caret-blink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+.caret::after {
+  content: "▮";
+  margin-left: 2px;
+  color: var(--accent);
+  animation: caret-blink 1s steps(1) infinite;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+.status-dot {
+  animation: pulse-dot 2.4s ease-in-out infinite;
+}
+
+/* scene canvas layer — fixed behind the DOM */
+.scene-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  transition: opacity 0.45s ease;
+}
+
+/* sparse hero sections let pointer events fall through to the 3D scene;
+   interactive children opt back in */
+.scene-passthrough {
+  pointer-events: none;
+}
+.scene-passthrough a,
+.scene-passthrough button,
+.scene-passthrough input,
+.scene-passthrough [data-interactive] {
+  pointer-events: auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .caret::after,
+  .status-dot {
+    animation: none;
+  }
+}

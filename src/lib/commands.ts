@@ -1,0 +1,373 @@
+"use client";
+
+/**
+ * commands.ts — terminal command registry + execution (the command bus).
+ * Commands receive a CmdCtx so they can drive real navigation, theme and
+ * scene state. This is a simulated shell: input is matched against this
+ * registry only — nothing is ever evaluated or executed.
+ */
+import { themes } from "@/config/theme";
+import { lexicon } from "@/config/console";
+import { profile } from "@/content/profile";
+import { projects } from "@/content/projects";
+import { useTerminalStore, type LineKind } from "@/stores/terminalStore";
+import { useSceneStore } from "@/stores/sceneStore";
+import { useUiStore } from "@/stores/uiStore";
+import {
+  resolvePath,
+  getNode,
+  isDir,
+  formatPath,
+  listDir,
+  HOME,
+} from "@/lib/fakeFs";
+
+export interface CmdCtx {
+  navigate: (path: string) => void;
+  close: () => void;
+}
+
+type Push = (text: string, kind?: LineKind) => void;
+
+interface Command {
+  desc: string;
+  usage?: string;
+  hidden?: boolean;
+  run: (args: string[], push: Push, ctx: CmdCtx) => void;
+}
+
+const PAGES: Record<string, string> = {
+  home: "/",
+  about: "/about",
+  work: "/work",
+  experience: "/experience",
+  lab: "/lab",
+  contact: "/contact",
+};
+
+const SL_TRAIN = String.raw`
+      ====        ________
+  _D _|  |_______/        \__I_I_____===__|_________
+   |(_)---  |   H\________/ |   |        =|___ ___|
+   /     |  |   H  |  |     |   |         ||_| |_||
+  |      |  |   H  |__------------------- | [___] |
+  | ________|___H__/__|_____/[][]~\_______|       |
+  |/ |   |-----------I_____I [][] []  D   |=======|
+__/ =| o |=-~~\  /~~\  /~~\  /~~\ ____Y___________|
+ |/-=|___|=    ||    ||    ||    |_____/~\___/
+  \_/      \__/  \__/  \__/  \__/      \_/`;
+
+export const commands: Record<string, Command> = {
+  help: {
+    desc: "list available commands",
+    run: (_a, push) => {
+      Object.entries(commands)
+        .filter(([, c]) => !c.hidden)
+        .forEach(([name, c]) =>
+          push(`  ${(c.usage ?? name).padEnd(18)} ${c.desc}`, "dim")
+        );
+      push("  (this shell has more commands than it admits to)", "dim");
+    },
+  },
+  whoami: {
+    desc: "operator identity",
+    run: (_a, push) => {
+      push(`${profile.name} — ${profile.role}`, "ok");
+      push(`loc: ${profile.location} · status: ${profile.availability}`);
+      push(profile.shortBio, "dim");
+    },
+  },
+  goto: {
+    desc: "navigate to a page",
+    usage: "goto <page>",
+    run: (args, push, ctx) => {
+      let page = (args[0] || "").toLowerCase();
+      /* prefix matching: goto ab → about */
+      if (!(page in PAGES) && page) {
+        const matches = Object.keys(PAGES).filter((p) => p.startsWith(page));
+        if (matches.length === 1) page = matches[0];
+        else if (matches.length > 1) {
+          push(`ambiguous: ${matches.join(", ")}`, "dim");
+          return;
+        }
+      }
+      if (page in PAGES) {
+        push(`→ ${lexicon.sectionPrefix}${lexicon.sections[page as keyof typeof lexicon.sections] ?? page.toUpperCase()}`, "ok");
+        ctx.navigate(PAGES[page]);
+        ctx.close();
+      } else {
+        push(`unknown page: ${page || "(none)"}`, "err");
+        push(`pages: ${Object.keys(PAGES).join(", ")}`, "dim");
+      }
+    },
+  },
+  open: {
+    desc: "inspect a deployment",
+    usage: "open <project>",
+    run: (args, push, ctx) => {
+      const slug = (args[0] || "").toLowerCase();
+      /* exact, then unique-prefix match */
+      let p = projects.find((x) => x.slug === slug);
+      if (!p && slug) {
+        const matches = projects.filter((x) => x.slug.startsWith(slug));
+        if (matches.length === 1) p = matches[0];
+        else if (matches.length > 1) {
+          push(`ambiguous: ${matches.map((x) => x.slug).join(", ")}`, "dim");
+          return;
+        }
+      }
+      if (p) {
+        push(`inspecting ${p.slug} … [${p.status}]`, "ok");
+        ctx.navigate(`/work/${p.slug}`);
+        ctx.close();
+      } else {
+        push(`no such deployment: ${slug || "(none)"}`, "err");
+        push(`registry: ${projects.map((x) => x.slug).join(", ")}`, "dim");
+      }
+    },
+  },
+  ls: {
+    desc: "list directory",
+    usage: "ls [-a] [path]",
+    run: (args, push) => {
+      const all = args.includes("-a");
+      const target = args.find((a) => !a.startsWith("-"));
+      const cwd = useTerminalStore.getState().cwd;
+      const path = target ? resolvePath(cwd, target) : cwd;
+      const node = getNode(path);
+      if (!isDir(node)) {
+        push(`ls: not a directory: ${target ?? formatPath(path)}`, "err");
+        return;
+      }
+      const entries = listDir(node, all);
+      push(entries.length ? entries.join("   ") : "(empty)");
+      if (all && entries.some((e) => e.startsWith("."))) {
+        useTerminalStore.getState().unlock("dotfiles");
+      }
+    },
+  },
+  cd: {
+    desc: "change directory",
+    usage: "cd <dir>",
+    run: (args, push) => {
+      const store = useTerminalStore.getState();
+      const target = args[0] ?? "~";
+      const path = target === "~" ? [...HOME] : resolvePath(store.cwd, target);
+      const node = getNode(path);
+      if (!isDir(node)) {
+        push(`cd: no such directory: ${target}`, "err");
+        return;
+      }
+      store.setCwd(path);
+    },
+  },
+  cat: {
+    desc: "print a file",
+    usage: "cat <file>",
+    run: (args, push) => {
+      if (!args[0]) return push("cat: missing operand", "err");
+      const cwd = useTerminalStore.getState().cwd;
+      const node = getNode(resolvePath(cwd, args[0]));
+      if (node === undefined) return push(`cat: no such file: ${args[0]}`, "err");
+      if (isDir(node)) return push(`cat: ${args[0]}: is a directory`, "err");
+      node.split("\n").forEach((l) => push(l));
+      if (args[0].includes(".secrets")) {
+        useTerminalStore.getState().unlock("secrets");
+      }
+    },
+  },
+  pwd: {
+    desc: "print working directory",
+    run: (_a, push) =>
+      push("/" + useTerminalStore.getState().cwd.join("/")),
+  },
+  contact: {
+    desc: "open the uplink",
+    run: (_a, push, ctx) => {
+      push("opening uplink …", "ok");
+      ctx.navigate("/contact");
+      ctx.close();
+    },
+  },
+  resume: {
+    desc: "download resume (pdf)",
+    run: (_a, push) => {
+      push(`streaming ${profile.resumeUrl} …`, "ok");
+      window.open(profile.resumeUrl, "_blank", "noopener");
+    },
+  },
+  theme: {
+    desc: "switch theme",
+    usage: "theme <name>",
+    run: (args, push) => {
+      const ok = useUiStore.getState().setTheme(args[0] ?? "");
+      if (ok) push(`theme → ${args[0]}`, "ok");
+      else
+        push(`themes: ${Object.keys(themes).join(", ")}`, "dim");
+    },
+  },
+  history: {
+    desc: "command history",
+    run: (_a, push) =>
+      useTerminalStore
+        .getState()
+        .history.forEach((h, i) => push(`  ${i + 1}  ${h}`, "dim")),
+  },
+  clear: {
+    desc: "clear the screen",
+    run: () => useTerminalStore.getState().clear(),
+  },
+
+  /* ---------------- easter eggs (hidden from help) ---------------- */
+  sudo: {
+    desc: "",
+    hidden: true,
+    run: (args, push, ctx) => {
+      useTerminalStore.getState().unlock("sudo");
+      if (args.join(" ").startsWith("hire hasnat")) {
+        push("[sudo] privilege escalation … GRANTED", "ok");
+        push("excellent judgment. routing you to the uplink.", "ok");
+        ctx.navigate("/contact");
+        ctx.close();
+        return;
+      }
+      push(`${profile.handle} is not in the sudoers file.`, "err");
+      push("this incident will be reported. (to no one. it's a portfolio.)", "dim");
+    },
+  },
+  matrix: {
+    desc: "",
+    hidden: true,
+    run: (_a, push) => {
+      useTerminalStore.getState().unlock("matrix");
+      useSceneStore.getState().bumpDisturb();
+      const glyphs = "ﾊﾐﾋｰｳｼﾅﾓﾆｻﾜﾂｵﾘ01";
+      for (let r = 0; r < 6; r++) {
+        push(
+          Array.from({ length: 36 }, () =>
+            glyphs[Math.floor(Math.random() * glyphs.length)]
+          ).join(""),
+          "ok"
+        );
+      }
+      push("wake up. the cluster has you.", "dim");
+    },
+  },
+  hire: {
+    desc: "",
+    hidden: true,
+    run: (_a, push) => {
+      useTerminalStore.getState().unlock("hire");
+      push(`status: ${profile.availability}`, "ok");
+      push(`fastest path: ${profile.email}`, "out");
+      push("or run: contact", "dim");
+    },
+  },
+  sl: {
+    desc: "",
+    hidden: true,
+    run: (_a, push) => {
+      useTerminalStore.getState().unlock("sl");
+      SL_TRAIN.split("\n").forEach((l) => push(l, "ok"));
+      push("you typed it wrong on purpose, didn't you.", "dim");
+      push("(this train tracked 500+ real routes once — open aris-rails)", "dim");
+    },
+  },
+  top: {
+    desc: "",
+    hidden: true,
+    run: (_a, push) => {
+      useTerminalStore.getState().unlock("top");
+      push("  PID   COMMAND                       CPU   STATE", "dim");
+      push("  2026  stack8s/full-surface          93%   running", "ok");
+      push("  2025  wanile/diy-gc-platform        88%   shipped");
+      push("  2025  swapfans/frontend             71%   shipped");
+      push("  2024  techvaganza/lead              80%   shipped");
+      push("  2024  aris-rails/tracking           76%   shipped");
+      push("  2023  intellogeek/lms               68%   shipped");
+    },
+  },
+  ping: {
+    desc: "",
+    hidden: true,
+    run: (args, push) => {
+      useTerminalStore.getState().unlock("ping");
+      const host = args[0] || "localhost";
+      push(`PING ${host} 56 bytes of data.`);
+      push(`64 bytes from ${host}: icmp_seq=1 ttl=42 time=0.2 ms`, "ok");
+      push("sub-200ms. as is tradition.", "dim");
+    },
+  },
+  neofetch: {
+    desc: "",
+    hidden: true,
+    run: (_a, push) => {
+      useTerminalStore.getState().unlock("neofetch");
+      push(`        ▄▄▄        ${profile.handle}@ops`, "ok");
+      push("      ▄█████▄      ---------", "ok");
+      push(`    ▄█████████▄    OS: ${lexicon.systemName} v1.0.0`, "ok");
+      push(`      ▀█████▀      Shell: simulated (nice try)`, "ok");
+      push(`        ▀▀▀        Uptime: 2+ years in prod`, "ok");
+    },
+  },
+  exit: {
+    desc: "",
+    hidden: true,
+    run: (_a, push) => {
+      push("there is no exit. only ESC.", "dim");
+    },
+  },
+};
+
+/** Parse + execute a raw input line. */
+export function execute(raw: string, ctx: CmdCtx) {
+  const store = useTerminalStore.getState();
+  const push: Push = (t, k) => store.push(t, k);
+  store.push(`${lexicon.prompt} ${raw}`, "in");
+  store.addHistory(raw);
+  const [name, ...args] = raw.trim().split(/\s+/);
+  if (!name) return;
+  const cmd = commands[name.toLowerCase()];
+  if (cmd) cmd.run(args, push, ctx);
+  else {
+    push(`command not found: ${name}`, "err");
+    push("run `help` to see what this shell admits to.", "dim");
+  }
+}
+
+/** Tab completion: commands, page names, slugs, fs paths. */
+export function complete(input: string): string[] {
+  const parts = input.split(/\s+/);
+  const cwd = useTerminalStore.getState().cwd;
+  if (parts.length <= 1) {
+    return Object.keys(commands)
+      .filter((c) => !commands[c].hidden && c.startsWith(parts[0] ?? ""))
+      .sort();
+  }
+  const [name, ...rest] = parts;
+  const last = rest[rest.length - 1] ?? "";
+  switch (name.toLowerCase()) {
+    case "goto":
+      return Object.keys(PAGES).filter((p) => p.startsWith(last));
+    case "open":
+      return projects.map((p) => p.slug).filter((s) => s.startsWith(last));
+    case "theme":
+      return Object.keys(themes).filter((t) => t.startsWith(last));
+    case "cd":
+    case "cat":
+    case "ls": {
+      const slash = last.lastIndexOf("/");
+      const dirPart = slash >= 0 ? last.slice(0, slash + 1) : "";
+      const filePart = slash >= 0 ? last.slice(slash + 1) : last;
+      const dirNode = getNode(
+        dirPart ? resolvePath(cwd, dirPart) : cwd
+      );
+      if (!isDir(dirNode)) return [];
+      return listDir(dirNode, filePart.startsWith("."))
+        .filter((e) => e.startsWith(filePart))
+        .map((e) => dirPart + e);
+    }
+    default:
+      return [];
+  }
+}
