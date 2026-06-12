@@ -5,6 +5,7 @@ An Awwwards-grade interactive portfolio designed as a live operations console in
 ## 🎨 Concept
 
 **hasnat.ops** reimagines the portfolio as a **deep-space operations interface**:
+
 - **Home (`/`)**: Boot sequence into the cluster hero—system introduction
 - **About (`/about`)**: Operator profile, skills map, and values
 - **Work (`/work`)**: Deployment registry (project index)
@@ -28,7 +29,7 @@ Every page speaks in infrastructure language—clean, precise, system-flavored�
   - Easter eggs and system commands
   - Fully typed command system
 
-- **Smooth Motion & Scroll**: 
+- **Smooth Motion & Scroll**:
   - GSAP + Lenis scroll choreography
   - Page transitions with motion boundaries
   - Synchronized 3D staging with scroll
@@ -63,6 +64,7 @@ Every page speaks in infrastructure language—clean, precise, system-flavored�
 ## 🚀 Getting Started
 
 ### Prerequisites
+
 - Node.js 20+ and npm/pnpm/yarn
 - Docker (optional, for containerized development)
 
@@ -91,6 +93,7 @@ npm run dev
 ```
 
 The development server includes:
+
 - Hot module reloading
 - Fast refresh for React components
 - TypeScript checking
@@ -197,9 +200,11 @@ postcss.config.mjs             # PostCSS configuration
 Two main configuration files control the entire system:
 
 ### `src/config/theme.ts`
+
 All design tokens: colors, typography scale, spacing, radii, visual effects (grain, bloom).
 
 ### `src/config/console.ts`
+
 Terminal lexicon (`"deployment"`, `"SYS://"`, boot lines, status verbs), scene presets, and parameter tuning.
 
 **To reskin the portfolio**: Edit these two files + `/src/content`. No component restructuring needed.
@@ -265,16 +270,20 @@ npm run build
 ## 🎓 Key Concepts
 
 ### Swappability
+
 The entire design and terminology system lives in config files. Retuning the metaphor (changing from "deployment" to "project", adjusting colors, tweaking motion) is a config-only change.
 
 ### Scene-Scoped Styling
+
 Each 3D scene is visually distinct:
+
 - **Cluster**: Cyan nodes (career infrastructure)
 - **Latent**: Violet particles (AI/LLM work)
 - **Pipeline**: Cyan flows (data pipelines)
 - **Deployment**: Per-project color variants
 
 ### Terminal-as-Navigation
+
 The terminal is a real navigation system tied to state, not just visual sugar. Every terminal command has a clickable equivalent. Terminal is additive, never required.
 
 ## 📄 License
