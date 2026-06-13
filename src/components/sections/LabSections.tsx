@@ -14,8 +14,8 @@ const EXPERIMENTS = [
   {
     id: "cluster-physics",
     title: "Cluster physics",
-    desc: "The home graph runs live spring dynamics — grab a node and let go. Terminal eggs shockwave it.",
-    hint: "goto home, then drag",
+    desc: "The home graph runs live spring dynamics — grab a node and fling it. The terminal operates it for real: scale, evict, drain.",
+    hint: "goto home, then: kubectl scale deployment cluster --replicas=200",
   },
   {
     id: "latent-field",
@@ -47,10 +47,12 @@ const EGGS: { id: string; label: string }[] = [
   { id: "top", label: "top" },
   { id: "ping", label: "ping" },
   { id: "neofetch", label: "neofetch" },
+  { id: "kubectl", label: "kubectl" },
 ];
 
 export default function LabSections() {
   const unlocked = useTerminalStore((s) => s.unlocked);
+  const found = EGGS.filter((e) => unlocked.includes(e.id)).length;
 
   return (
     <>
@@ -68,6 +70,18 @@ export default function LabSections() {
             Experiments, shader sketches, and the parts of this site that
             exist purely because they were fun to build.
           </p>
+          <p className="mt-6 flex flex-wrap gap-x-6 gap-y-2 font-mono text-xs text-muted">
+            <span>
+              {EXPERIMENTS.length} experiments ·{" "}
+              <span style={{ color: "var(--accent2)" }}>
+                {found}/{EGGS.length}
+              </span>{" "}
+              eggs discovered
+            </span>
+            <span className="hidden sm:inline">
+              the field behind this page is exp/latent-field, unsupervised
+            </span>
+          </p>
         </div>
       </section>
 
@@ -75,21 +89,26 @@ export default function LabSections() {
         <div className="mx-auto grid max-w-6xl gap-4 md:grid-cols-2">
           {EXPERIMENTS.map((x, i) => (
             <Reveal key={x.id} delay={i * 0.07}>
-              <div className="h-full rounded-lg border hairline bg-elev/50 p-7 transition-colors hover:border-[color:var(--accent2)]/40">
-                <p
-                  className="font-mono text-xs"
-                  style={{ color: "var(--accent2)" }}
-                >
-                  exp/{x.id}
-                </p>
-                <p className="mt-2 text-xl font-medium tracking-tight">
+              <div className="group h-full rounded-lg border hairline bg-elev/50 p-7 transition-all duration-300 hover:-translate-y-1 hover:border-[color:var(--accent2)]/50 hover:bg-elev/80">
+                <div className="flex items-baseline justify-between gap-4">
+                  <p
+                    className="font-mono text-xs"
+                    style={{ color: "var(--accent2)" }}
+                  >
+                    exp/{x.id}
+                  </p>
+                  <p className="font-mono text-[10px] text-muted">
+                    <span className="text-ok">●</span> live
+                  </p>
+                </div>
+                <p className="mt-2 text-xl font-medium tracking-tight transition-colors group-hover:text-[color:var(--accent2)]">
                   {x.title}
                 </p>
                 <p className="mt-3 text-sm leading-relaxed text-muted">
                   {x.desc}
                 </p>
-                <p className="mt-4 font-mono text-[11px] text-muted">
-                  hint: {x.hint}
+                <p className="mt-4 border-l-2 border-[color:var(--accent2)]/30 pl-3 font-mono text-[11px] text-muted">
+                  {x.hint}
                 </p>
               </div>
             </Reveal>
@@ -103,7 +122,7 @@ export default function LabSections() {
             <p className="sys-label mb-2">live shell</p>
             <p className="mb-6 font-mono text-xs text-muted">
               hint: try <span className="text-accent">ls -a</span> — discoveries
-              unlock below
+              unlock below ({found}/{EGGS.length})
             </p>
           </Reveal>
           <Reveal>

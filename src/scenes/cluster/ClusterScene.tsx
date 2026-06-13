@@ -52,6 +52,10 @@ export default function ClusterScene({ dim = false }: { dim?: boolean }) {
   const lastDisturb = useRef(0);
   /* pending click shockwave origin (-1 = none), consumed in useFrame */
   const shockId = useRef(-1);
+  /* fling: track drag-point velocity so release throws the node */
+  const dragVel = useMemo(() => new Float32Array(2), []);
+  const prevDrag = useMemo(() => new THREE.Vector3(), []);
+  const dragging = useRef(false);
 
   const { bases, phases, sizes, links, neighbors } = useMemo(() => {
     const rng = mulberry32(42);
@@ -91,6 +95,10 @@ export default function ClusterScene({ dim = false }: { dim?: boolean }) {
   const off = useMemo(() => new Float32Array(count * 3), [count]);
   const vel = useMemo(() => new Float32Array(count * 3), [count]);
   const hoverScale = useMemo(() => new Float32Array(count).fill(1), [count]);
+  /* per-node visibility scale (0..1) — kubectl scale/delete spawn & evict */
+  const life = useMemo(() => new Float32Array(count).fill(1), [count]);
+  const killTimer = useMemo(() => new Float32Array(count), [count]);
+  const lastKill = useRef(0);
   /* per-link glow intensity, lerped toward hover state each frame */
   const linkGlow = useMemo(
     () => new Float32Array(links.length).fill(0.18),
@@ -137,15 +145,24 @@ export default function ClusterScene({ dim = false }: { dim?: boolean }) {
     if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
   }, [count, colors, dim]);
 
-  /* release drag anywhere; clear tooltip on unmount */
+  /* release drag anywhere (carrying fling velocity); clear tooltip on unmount */
   useEffect(() => {
-    const up = () => (dragId.current = -1);
+    const up = () => {
+      const i = dragId.current;
+      if (i >= 0) {
+        const i3 = i * 3;
+        vel[i3] += THREE.MathUtils.clamp(dragVel[0], -16, 16);
+        vel[i3 + 1] += THREE.MathUtils.clamp(dragVel[1], -16, 16);
+      }
+      dragId.current = -1;
+      dragging.current = false;
+    };
     window.addEventListener("pointerup", up);
     return () => {
       window.removeEventListener("pointerup", up);
       useSceneStore.getState().setHoverLabel("");
     };
-  }, []);
+  }, [vel, dragVel]);
 
   const dummy = useMemo(() => new THREE.Object3D(), []);
   const tmp = useMemo(() => new THREE.Vector3(), []);
@@ -165,6 +182,40 @@ export default function ClusterScene({ dim = false }: { dim?: boolean }) {
       lastDisturb.current = store.disturb;
       for (let i = 0; i < count * 3; i++) vel[i] += (Math.random() - 0.5) * 6;
     }
+
+    /* kubectl delete pod <name>: evict a matching (or any) live node — it
+       gets flung upward, shrinks out, then respawns when its timer expires */
+    if (store.killSeq !== lastKill.current) {
+      lastKill.current = store.killSeq;
+      const name = store.killName;
+      let target = -1;
+      for (let i = 0; i < count; i++) {
+        if (
+          life[i] > 0.5 &&
+          killTimer[i] <= 0 &&
+          (!name || POD_NAMES[i % POD_NAMES.length] === name)
+        ) {
+          target = i;
+          break;
+        }
+      }
+      if (target < 0)
+        for (let i = 0; i < count; i++)
+          if (life[i] > 0.5 && killTimer[i] <= 0) {
+            target = i;
+            break;
+          }
+      if (target >= 0) {
+        const t3 = target * 3;
+        killTimer[target] = 2.4;
+        vel[t3] += (Math.random() - 0.5) * 8;
+        vel[t3 + 1] += 5 + Math.random() * 3;
+        vel[t3 + 2] += (Math.random() - 0.5) * 6;
+      }
+    }
+
+    /* kubectl scale: how many nodes are currently "scheduled" */
+    const liveCount = Math.round(store.replicaFrac * count);
 
     /* click shockwave: radial impulse rippling out from the clicked node */
     if (shockId.current >= 0) {
@@ -199,6 +250,16 @@ export default function ClusterScene({ dim = false }: { dim?: boolean }) {
       const dz = bases[dragId.current].z - cam.position.z;
       const k = dir.z !== 0 ? dz / dir.z : 0;
       dragPoint = dragVec.copy(cam.position).addScaledVector(dir, k);
+      /* drag-point velocity (world units/sec) for fling-on-release */
+      if (dragging.current && dt > 0) {
+        const inv = 1 / dt;
+        dragVel[0] = (dragPoint.x - prevDrag.x) * inv;
+        dragVel[1] = (dragPoint.y - prevDrag.y) * inv;
+      } else {
+        dragVel[0] = dragVel[1] = 0;
+        dragging.current = true;
+      }
+      prevDrag.copy(dragPoint);
     }
 
     const hov = hovered.current;
@@ -207,6 +268,11 @@ export default function ClusterScene({ dim = false }: { dim?: boolean }) {
     const linePos = lineGeo.attributes.position.array as Float32Array;
     for (let i = 0; i < count; i++) {
       const i3 = i * 3;
+      /* spawn/despawn: alive if scheduled (within replica count) and not
+         mid-eviction; life lerps so nodes pop in and shrink out smoothly */
+      if (killTimer[i] > 0) killTimer[i] -= dt;
+      const alive = i < liveCount && killTimer[i] <= 0;
+      life[i] += ((alive ? 1 : 0) - life[i]) * 0.12;
       if (i === dragId.current && dragPoint) {
         /* pin to pointer; spring returns it on release */
         off[i3] = THREE.MathUtils.clamp(dragPoint.x - bases[i].x, -3, 3);
@@ -237,7 +303,7 @@ export default function ClusterScene({ dim = false }: { dim?: boolean }) {
       hoverScale[i] += (targetScale - hoverScale[i]) * 0.15;
 
       dummy.position.set(x, y, z);
-      dummy.scale.setScalar(0.085 * sizes[i] * hoverScale[i]);
+      dummy.scale.setScalar(0.085 * sizes[i] * hoverScale[i] * life[i]);
       dummy.updateMatrix();
       mesh.setMatrixAt(i, dummy.matrix);
     }
@@ -260,7 +326,8 @@ export default function ClusterScene({ dim = false }: { dim?: boolean }) {
         : 0.16 + Math.sin(t * 0.8 + l * 1.7) * 0.05;
       const target = !dim && hov >= 0 && (a === hov || b === hov) ? 1 : base;
       linkGlow[l] += (target - linkGlow[l]) * 0.18;
-      const g = linkGlow[l];
+      /* a link is only as bright as its dimmer (or despawning) endpoint */
+      const g = linkGlow[l] * Math.min(life[a], life[b]);
       lineCol[l6] = lineCol[l6 + 1] = lineCol[l6 + 2] = g;
       lineCol[l6 + 3] = lineCol[l6 + 4] = lineCol[l6 + 5] = g;
     }

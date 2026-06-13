@@ -13,6 +13,7 @@ import { projects } from "@/content/projects";
 import { useTerminalStore, type LineKind } from "@/stores/terminalStore";
 import { useSceneStore } from "@/stores/sceneStore";
 import { useUiStore } from "@/stores/uiStore";
+import { getFps, getWorstFps, resetWorst } from "@/lib/perfMeter";
 import {
   resolvePath,
   getNode,
@@ -217,6 +218,81 @@ export const commands: Record<string, Command> = {
     desc: "clear the screen",
     run: () => useTerminalStore.getState().clear(),
   },
+  kubectl: {
+    desc: "operate the live cluster (get/scale/delete/drain)",
+    usage: "kubectl <cmd>",
+    run: (args, push, ctx) => {
+      useTerminalStore.getState().unlock("kubectl");
+      const scene = useSceneStore.getState();
+      const sub = (args[0] || "").toLowerCase();
+      const onHome =
+        typeof window !== "undefined" && window.location.pathname === "/";
+      const watch = () => {
+        if (!onHome) push("(run `goto home` to watch the cluster react)", "dim");
+      };
+
+      if (sub === "get") {
+        const what = (args[1] || "pods").toLowerCase();
+        if (what.startsWith("node")) {
+          push("NAME            STATUS   ROLES     AGE", "dim");
+          push("ops-control-1   Ready    control   2y", "ok");
+          push("ops-worker-1    Ready    worker    2y", "ok");
+          push("ops-worker-2    Ready    worker    2y", "ok");
+          return;
+        }
+        push("NAME                    READY   STATUS    RESTARTS", "dim");
+        ["nextjs", "fastapi", "pinecone", "stripe", "postgres", "gateway"].forEach(
+          (n, i) =>
+            push(`${`${n}-${7 + i}`.padEnd(23)} 1/1     Running   0`, "ok")
+        );
+        push(`… ${scene.replicas} replicas scheduled`, "dim");
+        return;
+      }
+      if (sub === "scale") {
+        const m = args.join(" ").match(/--replicas[ =](\d+)/);
+        if (!m) {
+          push("usage: kubectl scale deployment cluster --replicas=<n>", "dim");
+          return;
+        }
+        const n = Math.max(0, Math.min(400, parseInt(m[1], 10)));
+        scene.scaleReplicas(n);
+        scene.bumpDisturb();
+        push(`deployment.apps/cluster scaled to ${n} replicas`, "ok");
+        if (n === 0)
+          push("the hive goes dark. (scale --replicas=100 to bring it back)", "dim");
+        watch();
+        return;
+      }
+      if (sub === "delete") {
+        const raw = (args[2] || args[1] || "").replace(/^pod\//, "");
+        const base = raw.replace(/-\d+$/, "").toLowerCase();
+        scene.killPod(base);
+        push(`pod "${raw || "<scheduler-choice>"}" deleted`, "ok");
+        push("the scheduler will reconcile shortly.", "dim");
+        watch();
+        return;
+      }
+      if (sub === "drain") {
+        scene.scaleReplicas(0);
+        scene.bumpDisturb();
+        push("node/ops-worker-1 drained — workloads evicted", "ok");
+        watch();
+        return;
+      }
+      if (sub === "apply" || sub === "rollout") {
+        scene.scaleReplicas(100);
+        scene.bumpDisturb();
+        push("deployment.apps/cluster configured — desired state restored", "ok");
+        watch();
+        return;
+      }
+      push("usage: kubectl <get|scale|delete|drain|apply>", "dim");
+      push("  kubectl scale deployment cluster --replicas=200", "dim");
+      push("  kubectl delete pod nextjs-7", "dim");
+      push("  kubectl drain", "dim");
+      void ctx;
+    },
+  },
 
   /* ---------------- easter eggs (hidden from help) ---------------- */
   sudo: {
@@ -278,6 +354,13 @@ export const commands: Record<string, Command> = {
     hidden: true,
     run: (_a, push) => {
       useTerminalStore.getState().unlock("top");
+      const fps = getFps();
+      const worst = getWorstFps();
+      resetWorst();
+      push(
+        `  render: ${fps} fps (worst ${worst}) · ${useSceneStore.getState().replicas} replicas live`,
+        fps >= 50 ? "ok" : "err"
+      );
       push("  PID   COMMAND                       CPU   STATE", "dim");
       push("  2026  stack8s/full-surface          93%   running", "ok");
       push("  2025  wanile/diy-gc-platform        88%   shipped");
@@ -353,6 +436,10 @@ export function complete(input: string): string[] {
       return projects.map((p) => p.slug).filter((s) => s.startsWith(last));
     case "theme":
       return Object.keys(themes).filter((t) => t.startsWith(last));
+    case "kubectl":
+      return ["get", "scale", "delete", "drain", "apply"].filter((s) =>
+        s.startsWith(last)
+      );
     case "cd":
     case "cat":
     case "ls": {

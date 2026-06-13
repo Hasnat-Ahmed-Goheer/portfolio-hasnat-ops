@@ -7,11 +7,18 @@
  * reduced motion is requested ("off" tier).
  */
 import { Suspense, lazy, useEffect, useState, type ReactNode } from "react";
-import { Canvas } from "@react-three/fiber";
+import { Canvas, useFrame } from "@react-three/fiber";
 import { PerformanceMonitor } from "@react-three/drei";
 import { usePathname } from "next/navigation";
 import { useUiStore } from "@/stores/uiStore";
+import { tick } from "@/lib/perfMeter";
 import Effects from "./shared/Effects";
+
+/** feeds the module FPS meter — store-free, drives the telemetry strip + `top` */
+function FrameMeter() {
+  useFrame(() => tick(performance.now()));
+  return null;
+}
 
 const Cluster = lazy(() => import("./cluster/ClusterScene"));
 const Latent = lazy(() => import("./latent/LatentScene"));
@@ -112,6 +119,7 @@ export default function CanvasRoot() {
           flipflops={2}
           onFallback={() => setDegraded(true)}
         />
+        <FrameMeter />
         <Suspense fallback={null}>{sceneNodeFor(shown)}</Suspense>
         {gpuTier === "full" && !degraded && <Effects />}
       </Canvas>
