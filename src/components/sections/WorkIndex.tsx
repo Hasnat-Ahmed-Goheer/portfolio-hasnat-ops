@@ -42,6 +42,7 @@ export default function WorkIndex() {
             <Reveal key={p.slug} delay={Math.min(i * 0.05, 0.3)}>
               <Link
                 href={`/work/${p.slug}`}
+                data-cursor="inspect →"
                 onMouseEnter={() => setActiveProject(i)}
                 onMouseLeave={() => setActiveProject(-1)}
                 onFocus={() => setActiveProject(i)}

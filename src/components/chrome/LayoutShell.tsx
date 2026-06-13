@@ -18,6 +18,7 @@ import Footer from "./Footer";
 import Cursor from "./Cursor";
 import ScrollProgress from "./ScrollProgress";
 import HoverTip from "./HoverTip";
+import Toasts from "./Toasts";
 import BootSequence from "../terminal/BootSequence";
 import Terminal from "../terminal/Terminal";
 
@@ -80,11 +81,13 @@ export default function LayoutShell({ children }: { children: ReactNode }) {
       <main id="main" className="relative z-10">{children}</main>
       <Footer />
       <Terminal mode="palette" />
+      <Toasts />
       <Cursor />
       {/* mobile terminal launcher (keybinds need a keyboard) */}
       <button
         onClick={() => setOpen(true)}
         aria-label="Open terminal"
+        data-cursor="$_"
         className="fixed bottom-5 right-5 z-40 flex h-12 w-12 items-center justify-center rounded-full border hairline bg-elev/90 font-mono text-sm text-accent shadow-lg shadow-black/40 backdrop-blur md:hidden"
       >
         {">_"}
