@@ -45,12 +45,16 @@ void main() {
   /* terminal-egg shockwave: the whole field breathes outward, then settles */
   pos += normalize(pos + 0.0001) * uShock * (0.3 + aRand * 0.5);
 
-  float active = uActive < -0.5 ? 0.0 : step(abs(aCluster - uActive), 0.4);
-  vActive = active;
-  vFade = uActive < -0.5 ? 1.0 : mix(0.22, 1.0, active);
+  /* "active" is a reserved word in GLSL ES — using it kills compilation */
+  float sel = uActive < -0.5 ? 0.0 : step(abs(aCluster - uActive), 0.4);
+  vActive = sel;
+  vFade = uActive < -0.5 ? 1.0 : mix(0.22, 1.0, sel);
 
   vec4 mv = modelViewMatrix * vec4(pos, 1.0);
-  gl_PointSize = uSize * (0.5 + aRand) * (1.0 + active * 0.9 + uShock * 0.6) * (220.0 / -mv.z);
+  /* 26/-z ⇒ ~2–7px points at the resting camera (z≈8.5). The original
+     220/-z constant meant 30–90px additive points — a full-screen washout
+     that was never caught because the shader didn't compile until now. */
+  gl_PointSize = uSize * (0.5 + aRand) * (1.0 + sel * 0.9 + uShock * 0.6) * (26.0 / -mv.z);
   gl_Position = projectionMatrix * mv;
 }
 `;
@@ -135,7 +139,7 @@ export default function LatentScene({
       uActive: { value: -1 },
       uShock: { value: 0 },
       uPointer: { value: new THREE.Vector3(99, 99, 99) },
-      uSize: { value: 3.2 },
+      uSize: { value: 1.6 },
       uColor: { value: new THREE.Color("#8b5cf6") },
       uColorActive: { value: new THREE.Color("#22d3ee") },
     }),
