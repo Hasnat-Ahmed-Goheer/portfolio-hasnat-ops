@@ -142,7 +142,10 @@ export default function Terminal({ mode }: { mode: "palette" | "inline" }) {
       <div
         ref={scrollRef}
         aria-live="polite"
-        className="h-72 overflow-y-auto px-4 py-3 leading-relaxed"
+        /* data-lenis-prevent: without it Lenis swallows wheel events and
+           scrolls the page instead of the terminal buffer */
+        data-lenis-prevent
+        className="h-72 overflow-y-auto overscroll-contain px-4 py-3 leading-relaxed"
       >
         {lines.map((l) => (
           <div key={l.id} className={`whitespace-pre-wrap ${kindClass[l.kind]}`}>
