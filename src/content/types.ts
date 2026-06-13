@@ -36,6 +36,14 @@ export interface ExperienceEntry {
 
 export type MotifKey = "orbit" | "helix" | "pulse" | "rail" | "grid";
 
+export interface MediaItem {
+  /** path under /public, e.g. "/media/placeholder-dashboard.svg" */
+  src: string;
+  alt: string;
+  /** console-window title bar text, e.g. "console — workloads.tsx" */
+  caption: string;
+}
+
 export interface Project {
   slug: string;
   title: string;
@@ -47,6 +55,8 @@ export interface Project {
   architecture: string[];
   outcomes: string[];
   links: { repo?: string; live?: string };
+  /** screenshots / diagrams rendered as console windows on the case study */
+  media?: MediaItem[];
   motif: MotifKey;
   /** scene accent override (hex) — keeps per-project motifs distinct */
   accent?: string;

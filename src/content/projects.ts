@@ -25,6 +25,11 @@ export const projects: Project[] = [
       "Marketplace in production use by enterprise customers including Imperial College London.",
     ],
     links: {},
+    // TODO: replace placeholder media with real captures in /public/media
+    media: [
+      { src: "/media/placeholder-dashboard.svg", alt: "stack8s console — marketplace catalog", caption: "stack8s console — marketplace catalog" },
+      { src: "/media/placeholder-terminal.svg", alt: "helm upgrade — chart release log", caption: "helm upgrade — chart release log" },
+    ],
     motif: "helix",
     accent: "#22d3ee",
   },
@@ -47,6 +52,11 @@ export const projects: Project[] = [
       "Auth surface cut by ~60%; provider lock-in eliminated.",
     ],
     links: {},
+    // TODO: replace placeholder media with real captures in /public/media
+    media: [
+      { src: "/media/placeholder-dashboard.svg", alt: "workload console — deployment editor", caption: "workload console — deployment editor" },
+      { src: "/media/placeholder-architecture.svg", alt: "provisioning path — ui → fastapi → rancher", caption: "provisioning path — ui → fastapi → rancher" },
+    ],
     motif: "orbit",
     accent: "#22d3ee",
   },
@@ -65,6 +75,11 @@ export const projects: Project[] = [
     ],
     outcomes: ["Self-serve scaling across 15+ environments with zero manual node ops."],
     links: {},
+    // TODO: replace placeholder media with real captures in /public/media
+    media: [
+      { src: "/media/placeholder-architecture.svg", alt: "node lifecycle — request → join → drain", caption: "node lifecycle — request → join → drain" },
+      { src: "/media/placeholder-terminal.svg", alt: "kubectl get nodes — fleet view", caption: "kubectl get nodes — fleet view" },
+    ],
     motif: "grid",
     accent: "#34d399",
   },
@@ -87,6 +102,11 @@ export const projects: Project[] = [
       "Three audiences served on a single codebase.",
     ],
     links: {},
+    // TODO: replace placeholder media with real captures in /public/media
+    media: [
+      { src: "/media/placeholder-dashboard.svg", alt: "contractor dashboard — projects view", caption: "contractor dashboard — projects view" },
+      { src: "/media/placeholder-architecture.svg", alt: "clean architecture — module boundaries", caption: "clean architecture — module boundaries" },
+    ],
     motif: "grid",
     accent: "#f59e0b",
   },
@@ -105,6 +125,11 @@ export const projects: Project[] = [
     ],
     outcomes: ["Manual estimation time cut by 20%."],
     links: {},
+    // TODO: replace placeholder media with real captures in /public/media
+    media: [
+      { src: "/media/placeholder-architecture.svg", alt: "retrieval pipeline — embed → query → ground", caption: "retrieval pipeline — embed → query → ground" },
+      { src: "/media/placeholder-dashboard.svg", alt: "assistant — scoped estimate output", caption: "assistant — scoped estimate output" },
+    ],
     motif: "pulse",
     accent: "#8b5cf6",
   },
@@ -126,6 +151,11 @@ export const projects: Project[] = [
       "99.9% uptime SLA held on GCP.",
     ],
     links: {},
+    // TODO: replace placeholder media with real captures in /public/media
+    media: [
+      { src: "/media/placeholder-dashboard.svg", alt: "conversation view — live delivery", caption: "conversation view — live delivery" },
+      { src: "/media/placeholder-terminal.svg", alt: "ws gateway — connection log", caption: "ws gateway — connection log" },
+    ],
     motif: "pulse",
     accent: "#22d3ee",
   },
@@ -144,6 +174,11 @@ export const projects: Project[] = [
     ],
     outcomes: ["500+ routes live for 50+ operators."],
     links: {},
+    // TODO: replace placeholder media with real captures in /public/media
+    media: [
+      { src: "/media/placeholder-dashboard.svg", alt: "live map — 500+ routes clustered", caption: "live map — 500+ routes clustered" },
+      { src: "/media/placeholder-terminal.svg", alt: "ingest — 10k coords/min", caption: "ingest — 10k coords/min" },
+    ],
     motif: "rail",
     accent: "#f59e0b",
   },

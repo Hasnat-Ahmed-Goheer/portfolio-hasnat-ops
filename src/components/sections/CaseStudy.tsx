@@ -109,7 +109,44 @@ export default function CaseStudy({ project }: { project: Project }) {
         </div>
       </section>
 
-      {/* beat 4 — outcome */}
+      {/* beat 4 — visuals as console windows */}
+      {project.media && project.media.length > 0 && (
+        <section className="relative px-5 py-24" aria-label="Visuals">
+          <div className="mx-auto max-w-6xl">
+            <Reveal>
+              <p className="sys-label mb-8">attached media</p>
+            </Reveal>
+            <div className="grid gap-6 md:grid-cols-2">
+              {project.media.map((m, i) => (
+                <Reveal key={m.src + i} delay={i * 0.08}>
+                  <figure className="group overflow-hidden rounded-lg border hairline bg-elev/60 transition-colors hover:border-accent/40">
+                    <figcaption className="flex items-center gap-2 border-b hairline px-4 py-2.5 font-mono text-[11px] text-muted">
+                      <span className="flex gap-1.5" aria-hidden="true">
+                        <span className="h-2 w-2 rounded-full bg-danger/70" />
+                        <span className="h-2 w-2 rounded-full bg-accent2/70" />
+                        <span className="h-2 w-2 rounded-full bg-ok/70" />
+                      </span>
+                      <span className="truncate">{m.caption}</span>
+                    </figcaption>
+                    {/* plain <img>: local SVG placeholders; swap to real
+                        captures (and next/image if raster) via /content */}
+                    <img
+                      src={m.src}
+                      alt={m.alt}
+                      width={1280}
+                      height={800}
+                      loading="lazy"
+                      className="block w-full transition-transform duration-500 ease-out group-hover:scale-[1.02]"
+                    />
+                  </figure>
+                </Reveal>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* beat 5 — outcome */}
       <section className="relative px-5 py-24" aria-label="Outcome">
         <div className="mx-auto max-w-6xl">
           <Reveal>
@@ -128,7 +165,7 @@ export default function CaseStudy({ project }: { project: Project }) {
         </div>
       </section>
 
-      {/* beat 5 — next deployment */}
+      {/* beat 6 — next deployment */}
       <section className="relative border-t hairline px-5 py-20" aria-label="Next project">
         <div className="mx-auto max-w-6xl">
           <Reveal>
