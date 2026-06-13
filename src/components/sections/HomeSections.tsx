@@ -17,9 +17,24 @@ import DecodeText from "@/components/ui/DecodeText";
 import Magnetic from "@/components/ui/Magnetic";
 
 const STATEMENTS = [
-  { lead: "full-stack ownership", rest: "from Helm charts to the pixels on screen." },
-  { lead: "cloud-native infrastructure", rest: "Kubernetes control planes spanning 15+ environments." },
-  { lead: "AI that ships", rest: "RAG pipelines and vector search in production, not in demos." },
+  {
+    id: "ownership",
+    lead: "full-stack ownership",
+    rest: "from Helm charts to the pixels on screen.",
+    detail: "helm → rancher → fastapi → next.js → pixels",
+  },
+  {
+    id: "infra",
+    lead: "cloud-native infrastructure",
+    rest: "Kubernetes control planes spanning 15+ environments.",
+    detail: "k8s · 15+ environments · one control plane",
+  },
+  {
+    id: "ai",
+    lead: "AI that ships",
+    rest: "RAG pipelines and vector search in production, not in demos.",
+    detail: "gemini · pinecone · rag · sub-200ms p95",
+  },
 ];
 
 const STATS = [
@@ -82,17 +97,19 @@ export default function HomeSections() {
     { scope: heroRef, dependencies: [booted] }
   );
 
-  /* pinned system-intro: statements crossfade while the camera pushes in */
+  /* pinned system-intro: statements crossfade while the camera pushes in.
+     Everything starts visible in the DOM (SSR/reduced-motion safe) and is
+     hidden via gsap.set only once the timeline is guaranteed to exist. */
   useGSAP(
     () => {
       const el = introRef.current;
       if (!el) return;
-      const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
       const items = el.querySelectorAll<HTMLElement>("[data-statement]");
-      if (reduced) {
-        items.forEach((s) => (s.style.opacity = "1"));
-        return;
-      }
+      const railItems = el.querySelectorAll<HTMLElement>("[data-rail-item]");
+      const railFill = el.querySelector<HTMLElement>("[data-rail-fill]");
+      const railCount = el.querySelector<HTMLElement>("[data-rail-count]");
+
       const tl = gsap.timeline({
         scrollTrigger: {
           trigger: el,
@@ -103,18 +120,54 @@ export default function HomeSections() {
           onUpdate: (self) => useSceneStore.getState().setProgress(self.progress),
         },
       });
+
       items.forEach((item, i) => {
+        const at = i * 1.1;
+        const label = item.querySelector("[data-stmt-label]");
         const words = item.querySelectorAll("[data-word]");
+        const detail = item.querySelector("[data-stmt-detail]");
+        tl.fromTo(
+          label,
+          { opacity: 0, y: 16 },
+          { opacity: 1, y: 0, duration: 0.3 },
+          at
+        );
         tl.fromTo(
           words,
           { opacity: 0, y: 36 },
           { opacity: 1, y: 0, stagger: 0.045, duration: 0.5 },
-          i * 1.1
+          at + 0.06
+        );
+        tl.fromTo(
+          detail,
+          { opacity: 0, y: 12 },
+          { opacity: 1, y: 0, duration: 0.35 },
+          at + 0.42
         );
         if (i < items.length - 1) {
-          tl.to(item, { opacity: 0, y: -28, duration: 0.35 }, i * 1.1 + 0.75);
+          tl.to(item, { opacity: 0, y: -28, duration: 0.35 }, at + 0.75);
         }
       });
+
+      /* rail follows the playhead — correct in both scroll directions */
+      let lastIdx = -1;
+      tl.eventCallback("onUpdate", () => {
+        const idx = Math.min(items.length - 1, Math.floor(tl.time() / 1.1));
+        if (idx === lastIdx) return;
+        lastIdx = idx;
+        if (railCount) railCount.textContent = String(idx + 1);
+        railItems.forEach((r, j) =>
+          r.style.setProperty("color", j === idx ? "var(--accent)" : "var(--muted)")
+        );
+      });
+      if (railFill) {
+        tl.fromTo(
+          railFill,
+          { scaleY: 0 },
+          { scaleY: 1, ease: "none", duration: tl.duration() },
+          0
+        );
+      }
     },
     { scope: introRef }
   );
@@ -155,33 +208,71 @@ export default function HomeSections() {
         </div>
       </section>
 
-      {/* beat 3 — pinned system intro */}
+      {/* beat 3 — pinned system intro: progress rail + scrubbed statements */}
       <section ref={introRef} aria-label="What this system runs">
-        <div className="relative flex h-screen items-center px-5">
-          <div className="mx-auto w-full max-w-6xl">
-            {STATEMENTS.map((s, i) => (
-              <div
-                key={i}
-                data-statement
-                className="absolute inset-x-5 top-1/2 mx-auto max-w-6xl -translate-y-1/2"
-              >
-                <p className="font-mono text-xs text-muted">
-                  proc [{i + 1}/{STATEMENTS.length}]
-                </p>
-                <p className="mt-3 text-4xl font-medium leading-[1.08] tracking-tight sm:text-6xl">
-                  {s.lead.split(" ").map((w, j) => (
-                    <span key={j} data-word className="inline-block">
-                      <span className="text-accent">{w}</span>&nbsp;
-                    </span>
-                  ))}
-                  {s.rest.split(" ").map((w, j) => (
-                    <span key={j} data-word className="inline-block">
-                      {w}&nbsp;
-                    </span>
-                  ))}
-                </p>
+        <div className="relative flex min-h-screen items-center px-5 py-20 motion-reduce:h-auto">
+          <div className="mx-auto grid w-full max-w-6xl items-center gap-10 md:grid-cols-[210px_1fr]">
+            {/* progress rail (decorative; desktop + motion only) */}
+            <div
+              aria-hidden="true"
+              className="hidden flex-col gap-5 self-center md:flex motion-reduce:md:hidden"
+            >
+              <p className="font-mono text-xs text-muted">
+                proc [<span data-rail-count className="text-accent">1</span>/
+                {STATEMENTS.length}]
+              </p>
+              <div className="relative ml-1 h-36 w-px bg-text/10">
+                <div
+                  data-rail-fill
+                  className="absolute inset-0 origin-top scale-y-0 bg-accent"
+                />
               </div>
-            ))}
+              {STATEMENTS.map((s, i) => (
+                <p
+                  key={s.id}
+                  data-rail-item
+                  className="font-mono text-[11px] tracking-wide text-muted transition-colors duration-300"
+                  style={i === 0 ? { color: "var(--accent)" } : undefined}
+                >
+                  0{i + 1} ▸ {s.id}
+                </p>
+              ))}
+            </div>
+
+            {/* statements: stacked + scrubbed normally, flow layout when
+                motion is reduced (no overlap) */}
+            <div className="relative motion-reduce:space-y-16">
+              {STATEMENTS.map((s, i) => (
+                <div
+                  key={s.id}
+                  data-statement
+                  className="absolute inset-x-0 top-1/2 -translate-y-1/2 motion-reduce:relative motion-reduce:inset-auto motion-reduce:top-auto motion-reduce:translate-y-0"
+                >
+                  <p data-stmt-label className="font-mono text-xs text-muted">
+                    <span className="text-accent">proc/{s.id}</span> · pid{" "}
+                    {1024 + i} · running
+                  </p>
+                  <p className="mt-4 text-4xl font-medium leading-[1.08] tracking-tight sm:text-6xl">
+                    {s.lead.split(" ").map((w, j) => (
+                      <span key={j} data-word className="inline-block">
+                        <span className="text-accent">{w}</span>&nbsp;
+                      </span>
+                    ))}
+                    {s.rest.split(" ").map((w, j) => (
+                      <span key={j} data-word className="inline-block">
+                        {w}&nbsp;
+                      </span>
+                    ))}
+                  </p>
+                  <p
+                    data-stmt-detail
+                    className="mt-6 border-l-2 border-accent/40 pl-4 font-mono text-xs text-muted"
+                  >
+                    {s.detail}
+                  </p>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </section>
