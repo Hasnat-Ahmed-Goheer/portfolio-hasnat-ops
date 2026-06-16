@@ -6,7 +6,7 @@
  * the Lab badge grid tracks the same set. Auto-dismisses with a fade-out;
  * reduced-motion skips the slide (opacity only).
  */
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { useTerminalStore } from "@/stores/terminalStore";
 
 const LABELS: Record<string, string> = {
@@ -27,10 +27,12 @@ const LABELS: Record<string, string> = {
   vim: "vim · no escape",
 };
 
+const HOLD_MS = 3200;
+
 interface Toast {
   id: number;
   label: string;
-  exiting: boolean;
+  phase: "enter" | "exit";
 }
 
 let toastId = 0;
@@ -40,6 +42,7 @@ export default function Toasts() {
   const seen = useRef<Set<string>>(new Set());
   const [toasts, setToasts] = useState<Toast[]>([]);
   const primed = useRef(false);
+  const timers = useRef<Map<number, ReturnType<typeof setTimeout>>>(new Map());
 
   useEffect(() => {
     if (!primed.current) {
@@ -53,23 +56,33 @@ export default function Toasts() {
     const added = fresh.map((e) => ({
       id: toastId++,
       label: LABELS[e] ?? e,
-      exiting: false,
+      phase: "enter" as const,
     }));
     setToasts((t) => [...t, ...added]);
 
-    const exitTimer = setTimeout(() => {
-      setToasts((t) =>
-        t.map((x) => (added.some((a) => a.id === x.id) ? { ...x, exiting: true } : x))
-      );
-    }, 3200);
-    const removeTimer = setTimeout(() => {
-      setToasts((t) => t.filter((x) => !added.some((a) => a.id === x.id)));
-    }, 3600);
+    added.forEach((toast) => {
+      const timer = setTimeout(() => {
+        timers.current.delete(toast.id);
+        setToasts((t) =>
+          t.map((x) => (x.id === toast.id ? { ...x, phase: "exit" } : x))
+        );
+      }, HOLD_MS);
+      timers.current.set(toast.id, timer);
+    });
+
     return () => {
-      clearTimeout(exitTimer);
-      clearTimeout(removeTimer);
+      added.forEach((toast) => {
+        const t = timers.current.get(toast.id);
+        if (t) { clearTimeout(t); timers.current.delete(toast.id); }
+      });
     };
   }, [unlocked]);
+
+  const handleAnimEnd = useCallback((id: number, animName: string) => {
+    if (animName === "toast-out") {
+      setToasts((t) => t.filter((x) => x.id !== id));
+    }
+  }, []);
 
   if (!toasts.length) return null;
   return (
@@ -80,7 +93,8 @@ export default function Toasts() {
       {toasts.map((t) => (
         <div
           key={t.id}
-          className={`${t.exiting ? "toast-out" : "toast-in"} flex items-center gap-2 rounded-lg border border-[color:var(--accent2)]/40 bg-elev/95 px-3.5 py-2.5 font-mono text-xs shadow-lg shadow-black/40`}
+          className={`${t.phase === "exit" ? "toast-out" : "toast-in"} flex items-center gap-2 rounded-lg border border-[color:var(--accent2)]/40 bg-elev/95 px-3.5 py-2.5 font-mono text-xs shadow-lg shadow-black/40`}
+          onAnimationEnd={(e) => handleAnimEnd(t.id, e.animationName)}
         >
           <span className="text-[color:var(--accent2)]">★</span>
           <span className="text-muted">unlocked</span>
