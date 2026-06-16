@@ -57,22 +57,51 @@ export default function AboutSections() {
     []
   );
 
-  /* pinned skills scrub: drives the latent-field morph */
+  /* pinned skills scrub: drives the latent-field morph + sequential group reveals */
   useGSAP(
     () => {
       const el = skillsRef.current;
       if (!el || window.matchMedia("(prefers-reduced-motion: reduce)").matches)
         return;
-      gsap.timeline({
+
+      const groups = el.querySelectorAll<HTMLElement>("[data-skill-group]");
+      const n = groups.length;
+
+      gsap.set(groups, { opacity: 0, y: 40 });
+
+      const duration = 3;
+      const segDur = duration / n;
+
+      const tl = gsap.timeline({
         scrollTrigger: {
           trigger: el,
           start: "top top",
-          end: "+=160%",
+          end: "+=200%",
           pin: true,
           scrub: 0.5,
           onUpdate: (self) =>
             useSceneStore.getState().setProgress(self.progress),
         },
+      });
+
+      groups.forEach((group, i) => {
+        const tags = group.querySelectorAll("[data-group-tags] > span");
+        const start = i * segDur;
+
+        tl.to(group, { opacity: 1, y: 0, duration: segDur * 0.3 }, start);
+        tl.fromTo(
+          tags,
+          { opacity: 0, y: 12 },
+          { opacity: 1, y: 0, stagger: 0.015, duration: segDur * 0.25 },
+          start + segDur * 0.25
+        );
+        if (i < n - 1) {
+          tl.to(
+            group,
+            { opacity: 0, y: -24, duration: segDur * 0.2 },
+            start + segDur * 0.75
+          );
+        }
       });
     },
     { scope: skillsRef }
@@ -167,36 +196,61 @@ export default function AboutSections() {
         </div>
       </section>
 
-      {/* beat 3 — skills set piece (DOM mirror of the particle field) */}
+      {/* beat 3 — skills set piece: pinned query console */}
       <section ref={skillsRef} aria-label="Skills map">
-        <div className="flex min-h-screen flex-col justify-center px-5 py-16">
-          <div className="mx-auto w-full max-w-6xl">
-            <p className="sys-label mb-2">latent space · skills index</p>
-            <p className="mb-10 font-mono text-xs text-muted">
-              scroll to organize the field — hover or focus a cluster to query it
-            </p>
-            <ul className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-              {skillGroups.map((g) => (
-                <li key={g.id}>
-                  <button
-                    type="button"
-                    className="group w-full rounded-lg border hairline bg-elev/40 p-5 text-left transition-colors hover:border-accent/50 focus-visible:border-accent/50"
-                    onMouseEnter={() => setActiveSkillGroup(g.id)}
-                    onMouseLeave={() => setActiveSkillGroup("")}
-                    onFocus={() => setActiveSkillGroup(g.id)}
-                    onBlur={() => setActiveSkillGroup("")}
+        <div className="flex min-h-screen items-center px-5 py-16">
+          <div className="mx-auto grid w-full max-w-6xl gap-8 md:grid-cols-[1fr_1fr]">
+            <div>
+              <p className="sys-label mb-2">latent space · skills index</p>
+              <p className="mb-10 font-mono text-xs text-muted">
+                scroll to query the field — hover a cluster to excite it
+              </p>
+
+              <div className="relative min-h-[340px] motion-reduce:space-y-12">
+                {skillGroups.map((g, i) => (
+                  <div
+                    key={g.id}
+                    data-skill-group={i}
+                    className="skill-group-card absolute inset-x-0 top-0 motion-reduce:relative motion-reduce:inset-auto"
                   >
-                    <p className="font-mono text-xs text-accent">
-                      cluster/{g.id}
-                    </p>
-                    <p className="mt-1 text-lg font-medium">{g.label}</p>
-                    <p className="mt-3 text-sm leading-relaxed text-muted">
-                      {g.skills.join(" · ")}
-                    </p>
-                  </button>
-                </li>
-              ))}
-            </ul>
+                    <button
+                      type="button"
+                      className="group w-full text-left focus-visible:outline-none"
+                      onMouseEnter={() => setActiveSkillGroup(g.id)}
+                      onMouseLeave={() => setActiveSkillGroup("")}
+                      onFocus={() => setActiveSkillGroup(g.id)}
+                      onBlur={() => setActiveSkillGroup("")}
+                    >
+                      <p className="font-mono text-xs text-muted">
+                        <span className="text-accent">cluster/{g.id}</span>
+                        {" · "}
+                        <span>{g.skills.length} tools</span>
+                      </p>
+                      <h3 className="mt-3 text-4xl font-medium tracking-tight sm:text-5xl">
+                        <DecodeText text={g.label} />
+                      </h3>
+                      {g.philosophy && (
+                        <p className="mt-2 font-mono text-sm text-muted/70 italic">
+                          &ldquo;{g.philosophy}&rdquo;
+                        </p>
+                      )}
+                      <div data-group-tags className="mt-5 flex flex-wrap gap-2">
+                        {g.skills.map((skill) => (
+                          <span
+                            key={skill}
+                            className="rounded border hairline px-2.5 py-1 font-mono text-xs text-text/70 transition-colors group-hover:border-accent/30 group-focus-visible:border-accent/30"
+                          >
+                            {skill}
+                          </span>
+                        ))}
+                      </div>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="hidden md:block" aria-hidden="true" />
           </div>
         </div>
       </section>

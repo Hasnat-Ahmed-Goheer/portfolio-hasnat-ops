@@ -17,6 +17,8 @@ import { mulberry32 } from "../shared/rng";
 import { glslSimplexNoise } from "../shared/noise.glsl";
 import AmbientField from "../shared/AmbientField";
 
+const SKILL_GROUP_IDS = ["frontend", "backend", "cloud", "ai-data", "architecture"];
+
 /* simplex flow field (full tier): organic drift while loose, settling into the
    clusters as uMorph→1. A single snoiseVec3 (3 noise evals) — rich, but real
    GPU only. */
@@ -217,10 +219,11 @@ export default function LatentScene({
     shock.current *= Math.exp(-2 * Math.min(delta, 0.05));
     u.uShock.value = shock.current;
 
-    /* hover excite disabled by design: no colour/brightness shift when the
-       pointer moves over the field (uActive < -0.5 ⇒ every point stays its
-       own hue at full fade) */
-    u.uActive.value = -1;
+    const activeId = store.activeSkillGroup;
+    const targetActive = variant === "about" && activeId
+      ? SKILL_GROUP_IDS.indexOf(activeId)
+      : -1;
+    u.uActive.value += (targetActive - u.uActive.value) * 0.12;
 
     /* pointer in world space (plane z≈0) */
     const cam = state.camera;

@@ -30,6 +30,7 @@ export interface SkillGroup {
   id: string;
   label: string;
   skills: string[];
+  philosophy?: string;
 }
 
 export interface ExperienceEntry {

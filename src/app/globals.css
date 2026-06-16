@@ -186,4 +186,35 @@ body {
     animation: none;
     opacity: 0;
   }
+  .skill-group-card {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+  .subsystem-card::after {
+    animation: none;
+  }
+}
+
+/* subsystem card: accent glow on hover/focus */
+.subsystem-card {
+  position: relative;
+}
+.subsystem-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  border: 1px solid var(--accent);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+.subsystem-card:hover::after,
+.subsystem-card:focus-visible::after {
+  opacity: 0.35;
+  animation: border-pulse 2s ease-in-out infinite;
+}
+@keyframes border-pulse {
+  0%, 100% { opacity: 0.35; }
+  50% { opacity: 0.12; }
 }

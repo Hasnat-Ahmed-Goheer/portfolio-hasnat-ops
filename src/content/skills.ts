@@ -5,6 +5,7 @@ export const skillGroups: SkillGroup[] = [
   {
     id: "frontend",
     label: "Frontend",
+    philosophy: "pixels are the last mile of the pipeline",
     skills: [
       "Next.js",
       "React",
@@ -18,6 +19,7 @@ export const skillGroups: SkillGroup[] = [
   {
     id: "backend",
     label: "Backend",
+    philosophy: "the API contract is the architecture",
     skills: [
       "Node.js",
       "NestJS",
@@ -34,6 +36,7 @@ export const skillGroups: SkillGroup[] = [
   {
     id: "cloud",
     label: "Cloud & DevOps",
+    philosophy: "cattle not pets, always one push away",
     skills: [
       "AWS (S3 · EC2 · Lambda · ELB · API GW · VPC)",
       "GCP",
@@ -49,6 +52,7 @@ export const skillGroups: SkillGroup[] = [
   {
     id: "ai-data",
     label: "AI & Databases",
+    philosophy: "search is reasoning over structure",
     skills: [
       "RAG",
       "Multi-modal AI Systems",
@@ -64,6 +68,7 @@ export const skillGroups: SkillGroup[] = [
   {
     id: "architecture",
     label: "Architecture & Design",
+    philosophy: "build for the swap, measure the seams",
     skills: [
       "Microservices Architecture",
       "Clean Architecture",
