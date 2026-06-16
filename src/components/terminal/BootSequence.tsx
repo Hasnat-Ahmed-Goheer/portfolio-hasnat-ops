@@ -13,11 +13,13 @@ const SESSION_KEY = "ops-booted";
 export default function BootSequence() {
   const setBooted = useUiStore((s) => s.setBooted);
   const reducedMotion = useUiStore((s) => s.reducedMotion);
+  const sceneReady = useUiStore((s) => s.sceneReady);
   const [mounted, setMounted] = useState(false);
   const [skipBoot, setSkipBoot] = useState(true); // resolved after mount
   const [count, setCount] = useState(0);
   const [fading, setFading] = useState(false);
   const finished = useRef(false);
+  const fadeTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   useEffect(() => {
     setMounted(true);
@@ -41,23 +43,34 @@ export default function BootSequence() {
     finished.current = true;
     sessionStorage.setItem(SESSION_KEY, "1");
     setFading(true);
-    setTimeout(() => {
-      setBooted(true);
-      setSkipBoot(true);
-    }, 550);
+    /* reveal the chrome + hero WITH the panel fade (not 550ms after) so the
+       site arrives as one beat instead of a dead gap; the panel only unmounts
+       once its fade-out has finished */
+    setBooted(true);
+    fadeTimer.current = setTimeout(() => setSkipBoot(true), 550);
   };
+  useEffect(() => () => clearTimeout(fadeTimer.current), []);
 
   /* typed line cadence */
   useEffect(() => {
     if (!mounted || skipBoot) return;
-    if (count >= bootLines.length) {
-      const t = setTimeout(finish, 450);
-      return () => clearTimeout(t);
-    }
+    if (count >= bootLines.length) return; // typed out; reveal handled below
     const t = setTimeout(() => setCount((c) => c + 1), count === 0 ? 350 : 230);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mounted, skipBoot, count]);
+
+  /* once typed out, hold the boot screen until the scene is actually warm,
+     then lift — so we reveal a rendered scene, not a blank canvas. sceneReady
+     is the single readiness source: CanvasRoot guarantees it flips (its 2s
+     fail-safe, or instantly on the no-canvas tier), so no separate cap here */
+  const linesDone = count >= bootLines.length;
+  useEffect(() => {
+    if (!mounted || skipBoot || !linesDone || !sceneReady) return;
+    const t = setTimeout(finish, 300);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mounted, skipBoot, linesDone, sceneReady]);
 
   /* skip on any key / click */
   useEffect(() => {
@@ -96,7 +109,15 @@ export default function BootSequence() {
             {line}
           </div>
         ))}
-        <div className="caret text-text/85" />
+        {linesDone &&
+          (sceneReady ? (
+            <div className="text-ok">[ ok ] render online</div>
+          ) : (
+            <div className="text-accent2">
+              [ .. ] warming render pipeline<span className="caret" />
+            </div>
+          ))}
+        {!linesDone && <div className="caret text-text/85" />}
         <button
           onClick={finish}
           className="mt-8 text-xs text-muted hover:text-text"

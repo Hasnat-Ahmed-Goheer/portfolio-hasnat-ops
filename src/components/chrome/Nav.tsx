@@ -32,7 +32,7 @@ export default function Nav() {
 
   return (
     <header
-      className={`fixed inset-x-0 top-0 z-40 transition-opacity duration-700 ${
+      className={`fixed inset-x-0 top-0 z-40 transition-opacity duration-700 motion-reduce:transition-none ${
         booted ? "opacity-100" : "opacity-0"
       }`}
     >

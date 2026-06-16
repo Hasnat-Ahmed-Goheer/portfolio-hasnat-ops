@@ -6,7 +6,7 @@
  * Renders a static gradient fallback when WebGL is unavailable or
  * reduced motion is requested ("off" tier).
  */
-import { Suspense, lazy, useEffect, useState, type ReactNode } from "react";
+import { Suspense, lazy, useEffect, useRef, useState, type ReactNode } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { PerformanceMonitor } from "@react-three/drei";
 import { usePathname } from "next/navigation";
@@ -17,6 +17,24 @@ import Effects from "./shared/Effects";
 /** feeds the module FPS meter — store-free, drives the telemetry strip + `top` */
 function FrameMeter() {
   useFrame(() => tick(performance.now()));
+  return null;
+}
+
+/** Signals first-load readiness once the active scene has actually rendered
+    a few frames (lazy chunk resolved + shaders compiled + first paint). Lives
+    INSIDE the scene's Suspense boundary so it can't fire on the bare canvas.
+    One-time write to uiStore (not sceneStore) — never a per-frame target. */
+function ReadySignal() {
+  const frames = useRef(0);
+  const done = useRef(false);
+  useFrame(() => {
+    if (done.current) return;
+    frames.current += 1;
+    if (frames.current >= 3) {
+      done.current = true;
+      useUiStore.getState().setSceneReady(true);
+    }
+  });
   return null;
 }
 
@@ -51,6 +69,7 @@ function sceneNodeFor(key: string): ReactNode {
 
 export default function CanvasRoot() {
   const gpuTier = useUiStore((s) => s.gpuTier);
+  const sceneReady = useUiStore((s) => s.sceneReady);
   const pathname = usePathname();
   const target = sceneKeyFor(pathname);
 
@@ -62,16 +81,32 @@ export default function CanvasRoot() {
   const [degraded, setDegraded] = useState(false);
   const [eventSource, setEventSource] = useState<HTMLElement | null>(null);
 
-  /* crossfade scene swap */
+  /* crossfade scene swap — fast on purpose: during a route change the opaque
+     RouteCurtain covers the viewport, so the whole fade-out → swap → fade-in
+     must finish UNDER the curtain (≈0.2s + 0.2s) before it lifts (~0.42s),
+     revealing a fully-settled scene rather than a half-faded one */
   useEffect(() => {
     if (target === shown) return;
     setVisible(false);
     const t = setTimeout(() => {
       setShown(target);
       setVisible(true);
-    }, 380);
+    }, 200);
     return () => clearTimeout(t);
   }, [target, shown]);
+
+  /* no-canvas tier never renders a frame — unblock the boot reveal */
+  useEffect(() => {
+    if (gpuTier === "off") useUiStore.getState().setSceneReady(true);
+  }, [gpuTier]);
+
+  /* fail-safe: never let the canvas stay hidden if ReadySignal hasn't fired
+     (slow chunk, throttled tab, etc.) — force the reveal after 2s */
+  useEffect(() => {
+    if (sceneReady) return;
+    const t = setTimeout(() => useUiStore.getState().setSceneReady(true), 2000);
+    return () => clearTimeout(t);
+  }, [sceneReady]);
 
   /* pause rendering when tab hidden */
   useEffect(() => {
@@ -101,7 +136,9 @@ export default function CanvasRoot() {
     <div
       aria-hidden="true"
       className="scene-layer"
-      style={{ opacity: visible ? 1 : 0 }}
+      /* first load fades in only once the scene has actually rendered
+         (sceneReady); thereafter it's just the per-route crossfade */
+      style={{ opacity: visible && sceneReady ? 1 : 0 }}
     >
       <Canvas
         camera={{ position: [0, 0, 9], fov: 50 }}
@@ -120,7 +157,10 @@ export default function CanvasRoot() {
           onFallback={() => setDegraded(true)}
         />
         <FrameMeter />
-        <Suspense fallback={null}>{sceneNodeFor(shown)}</Suspense>
+        <Suspense fallback={null}>
+          {sceneNodeFor(shown)}
+          <ReadySignal />
+        </Suspense>
         {gpuTier === "full" && !degraded && <Effects />}
       </Canvas>
     </div>

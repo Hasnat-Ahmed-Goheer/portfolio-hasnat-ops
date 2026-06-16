@@ -11,10 +11,14 @@ interface UiState {
   gpuTier: GpuTier;
   reducedMotion: boolean;
   booted: boolean;
+  /** true once the WebGL scene has actually rendered its first frames —
+      gates the canvas fade-in and lets BootSequence reveal a warm scene */
+  sceneReady: boolean;
   setTheme: (t: string) => boolean;
   setGpuTier: (t: GpuTier) => void;
   setReducedMotion: (v: boolean) => void;
   setBooted: (v: boolean) => void;
+  setSceneReady: (v: boolean) => void;
 }
 
 export const useUiStore = create<UiState>((set) => ({
@@ -22,6 +26,7 @@ export const useUiStore = create<UiState>((set) => ({
   gpuTier: "full",
   reducedMotion: false,
   booted: false,
+  sceneReady: false,
   setTheme: (t) => {
     if (!(t in themes)) return false;
     const name = t as ThemeName;
@@ -32,4 +37,5 @@ export const useUiStore = create<UiState>((set) => ({
   setGpuTier: (gpuTier) => set({ gpuTier }),
   setReducedMotion: (reducedMotion) => set({ reducedMotion }),
   setBooted: (booted) => set({ booted }),
+  setSceneReady: (sceneReady) => set({ sceneReady }),
 }));
