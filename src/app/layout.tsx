@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { GeistSans } from "geist/font/sans";
 import { GeistMono } from "geist/font/mono";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import "./globals.css";
 import LayoutShell from "@/components/chrome/LayoutShell";
 import { profile } from "@/content/profile";
@@ -71,6 +72,7 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(personJsonLd) }}
         />
         <LayoutShell>{children}</LayoutShell>
+        <SpeedInsights />
       </body>
     </html>
   );
