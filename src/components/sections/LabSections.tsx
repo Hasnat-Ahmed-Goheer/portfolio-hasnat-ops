@@ -48,6 +48,11 @@ const EGGS: { id: string; label: string }[] = [
   { id: "ping", label: "ping" },
   { id: "neofetch", label: "neofetch" },
   { id: "kubectl", label: "kubectl" },
+  { id: "whoami", label: "whoami" },
+  { id: "uptime", label: "uptime" },
+  { id: "coffee", label: "coffee" },
+  { id: "cowsay", label: "cowsay" },
+  { id: "vim", label: "vim" },
 ];
 
 export default function LabSections() {

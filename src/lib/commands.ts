@@ -73,6 +73,7 @@ export const commands: Record<string, Command> = {
   whoami: {
     desc: "operator identity",
     run: (_a, push) => {
+      useTerminalStore.getState().unlock("whoami");
       push(`${profile.name} — ${profile.role}`, "ok");
       push(`loc: ${profile.location} · status: ${profile.availability}`);
       push(profile.shortBio, "dim");
@@ -391,6 +392,49 @@ export const commands: Record<string, Command> = {
       push(`    ▄█████████▄    OS: ${lexicon.systemName} v1.0.0`, "ok");
       push(`      ▀█████▀      Shell: simulated (nice try)`, "ok");
       push(`        ▀▀▀        Uptime: 2+ years in prod`, "ok");
+    },
+  },
+  uptime: {
+    desc: "",
+    hidden: true,
+    run: (_a, push) => {
+      useTerminalStore.getState().unlock("uptime");
+      push(" up 2y+,  15+ environments,  load average: shipping, shipping, shipping", "ok");
+      push(" SLA 99.9% · last unplanned outage: none on record", "dim");
+    },
+  },
+  coffee: {
+    desc: "",
+    hidden: true,
+    run: (_a, push) => {
+      useTerminalStore.getState().unlock("coffee");
+      push("HTTP 418 — I'm a teapot.", "err");
+      push("this node refuses to brew coffee. it only ships software.", "dim");
+    },
+  },
+  cowsay: {
+    desc: "",
+    hidden: true,
+    run: (args, push) => {
+      useTerminalStore.getState().unlock("cowsay");
+      const msg = args.join(" ").slice(0, 40) || "ship it.";
+      push(" " + "_".repeat(msg.length + 2));
+      push(`< ${msg} >`);
+      push(" " + "-".repeat(msg.length + 2));
+      push("        \\   ^__^");
+      push("         \\  (oo)\\_______");
+      push("            (__)\\       )\\/\\");
+      push("                ||----w |");
+      push("                ||     ||");
+    },
+  },
+  vim: {
+    desc: "",
+    hidden: true,
+    run: (_a, push) => {
+      useTerminalStore.getState().unlock("vim");
+      push("entering vim …", "ok");
+      push(":q!  —  or just close the tab. we both know how this ends.", "dim");
     },
   },
   exit: {
