@@ -72,7 +72,7 @@ export default function AmbientField({
   const gpuTier = useUiStore((s) => s.gpuTier);
   const theme = useUiStore((s) => s.theme);
   const colors = themes[theme];
-  const count = gpuTier === "mobile" ? 450 : 1100;
+  const count = gpuTier === "mobile" ? 550 : 1400;
 
   const matRef = useRef<THREE.ShaderMaterial>(null);
   const shock = useRef(0);

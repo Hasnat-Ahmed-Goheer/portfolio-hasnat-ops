@@ -142,7 +142,7 @@ export default function CanvasRoot() {
     >
       <Canvas
         camera={{ position: [0, 0, 9], fov: 50 }}
-        dpr={degraded ? 1 : gpuTier === "mobile" ? [1, 1.25] : [1, 1.5]}
+        dpr={degraded ? 1 : gpuTier === "mobile" ? [1, 1.5] : [1, 1.75]}
         /* antialias off: scenes are points/wireframes + bloom, MSAA buys
            nothing visible here and costs a full-screen multisample resolve */
         gl={{ antialias: false, powerPreference: "high-performance", alpha: true }}
