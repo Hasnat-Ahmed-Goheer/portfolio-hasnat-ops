@@ -45,9 +45,9 @@ const STATS = [
 ];
 
 const SUBSYSTEMS = [
-  { href: "/work", label: "WORK", desc: "inspect the deployments" },
-  { href: "/experience", label: "LOG", desc: "replay the event history" },
-  { href: "/contact", label: "UPLINK", desc: "open a connection" },
+  { href: "/work", label: "WORK", desc: "inspect the deployments", sysId: "sys.registry" },
+  { href: "/experience", label: "LOG", desc: "replay the event history", sysId: "sys.eventlog" },
+  { href: "/contact", label: "UPLINK", desc: "open a connection", sysId: "sys.uplink" },
 ];
 
 function Counter({ value, prefix = "", suffix = "" }: { value: number; prefix?: string; suffix?: string }) {
@@ -305,13 +305,23 @@ export default function HomeSections() {
                 <Magnetic>
                   <Link
                     href={s.href}
-                    className="group block rounded-lg border hairline bg-elev/50 p-8 transition-colors hover:border-accent/40"
+                    data-cursor="enter →"
+                    className="subsystem-card group block overflow-hidden rounded-lg border hairline bg-elev/50 p-10 transition-colors duration-300 hover:border-accent/40 focus-visible:border-accent/50"
                   >
-                    <p className="text-3xl font-medium tracking-tight group-hover:text-accent">
+                    <div className="flex items-center gap-2 font-mono text-[11px] text-muted">
+                      <span
+                        className="inline-block h-1.5 w-1.5 rounded-full bg-ok status-dot"
+                        aria-hidden="true"
+                      />
+                      <span>{s.sysId}</span>
+                    </div>
+                    <p className="mt-4 text-4xl font-medium tracking-tight transition-colors duration-300 group-hover:text-accent group-focus-visible:text-accent">
                       {s.label}
                     </p>
-                    <p className="mt-3 font-mono text-xs text-muted">{s.desc}</p>
-                    <p className="mt-8 font-mono text-xs text-accent opacity-0 transition-opacity group-hover:opacity-100">
+                    <p className="mt-3 font-mono text-xs leading-relaxed text-muted">
+                      {s.desc}
+                    </p>
+                    <p className="mt-10 font-mono text-xs text-accent opacity-0 transition-all duration-300 group-hover:opacity-100 group-hover:translate-x-1 group-focus-visible:opacity-100 group-focus-visible:translate-x-1">
                       → enter
                     </p>
                   </Link>
