@@ -12,7 +12,10 @@ import { lexicon } from "@/config/console";
 import { profile } from "@/content/profile";
 import { skillGroups } from "@/content/skills";
 import { experience } from "@/content/experience";
+import { themes } from "@/config/theme";
 import { useSceneStore } from "@/stores/sceneStore";
+import { useUiStore } from "@/stores/uiStore";
+import { clusterAccent } from "@/lib/color";
 import Reveal from "@/components/ui/Reveal";
 import DecodeText from "@/components/ui/DecodeText";
 
@@ -46,7 +49,34 @@ const VALUES = [
 
 export default function AboutSections() {
   const skillsRef = useRef<HTMLDivElement>(null);
+  const progressRef = useRef<HTMLSpanElement>(null);
+  /* which cluster the scroll playhead is currently on; hover restores to it */
+  const scanIdx = useRef(0);
+  const hovering = useRef(false);
   const setActiveSkillGroup = useSceneStore((s) => s.setActiveSkillGroup);
+  /* re-renders only when the active cluster changes (~5×), never per-frame —
+     the playhead writes via getState(), and progress goes through a ref */
+  const activeId = useSceneStore((s) => s.activeSkillGroup);
+  const currentId = activeId || skillGroups[0].id;
+  const currentIdx = Math.max(
+    0,
+    skillGroups.findIndex((g) => g.id === currentId)
+  );
+  const activeGroup = skillGroups[currentIdx];
+  /* per-cluster hue band (theme-derived) — matches the 3D field's uActiveColor
+     so the rail dot, panel, and excited particle cluster all glow the same tint */
+  const theme = useUiStore((s) => s.theme);
+  const accentBase = themes[theme].accent3;
+  const hueOf = (i: number) => clusterAccent(accentBase, i, skillGroups.length);
+
+  const excite = (id: string) => {
+    hovering.current = true;
+    setActiveSkillGroup(id);
+  };
+  const release = () => {
+    hovering.current = false;
+    setActiveSkillGroup(skillGroups[scanIdx.current].id);
+  };
 
   useEffect(
     () => () => {
@@ -57,51 +87,39 @@ export default function AboutSections() {
     []
   );
 
-  /* pinned skills scrub: drives the latent-field morph + sequential group reveals */
+  /* pinned skills scan: scroll drives the latent-field morph AND a playhead
+     that excites each cluster 1→5 in turn (rail + 3D in sync). No per-group
+     opacity timeline — every card is rendered at rest, so a failed trigger
+     can't strand content at opacity:0 (CLAUDE.md pitfall #5). */
   useGSAP(
     () => {
       const el = skillsRef.current;
       if (!el || window.matchMedia("(prefers-reduced-motion: reduce)").matches)
         return;
 
-      const groups = el.querySelectorAll<HTMLElement>("[data-skill-group]");
-      const n = groups.length;
-
-      gsap.set(groups, { opacity: 0, y: 40 });
-
-      const duration = 3;
-      const segDur = duration / n;
-
-      const tl = gsap.timeline({
+      const n = skillGroups.length;
+      gsap.timeline({
         scrollTrigger: {
           trigger: el,
           start: "top top",
           end: "+=200%",
           pin: true,
           scrub: 0.5,
-          onUpdate: (self) =>
-            useSceneStore.getState().setProgress(self.progress),
+          onUpdate: (self) => {
+            const store = useSceneStore.getState();
+            store.setProgress(self.progress);
+            const idx = Math.min(n - 1, Math.floor(self.progress * n));
+            if (idx !== scanIdx.current) {
+              scanIdx.current = idx;
+              if (!hovering.current) store.setActiveSkillGroup(skillGroups[idx].id);
+            }
+            if (progressRef.current) {
+              progressRef.current.textContent = `scanning ${idx + 1}/${n} · morph ${Math.round(
+                self.progress * 100
+              )}%`;
+            }
+          },
         },
-      });
-
-      groups.forEach((group, i) => {
-        const tags = group.querySelectorAll("[data-group-tags] > span");
-        const start = i * segDur;
-
-        tl.to(group, { opacity: 1, y: 0, duration: segDur * 0.3 }, start);
-        tl.fromTo(
-          tags,
-          { opacity: 0, y: 12 },
-          { opacity: 1, y: 0, stagger: 0.015, duration: segDur * 0.25 },
-          start + segDur * 0.25
-        );
-        if (i < n - 1) {
-          tl.to(
-            group,
-            { opacity: 0, y: -24, duration: segDur * 0.2 },
-            start + segDur * 0.75
-          );
-        }
       });
     },
     { scope: skillsRef }
@@ -196,61 +214,145 @@ export default function AboutSections() {
         </div>
       </section>
 
-      {/* beat 3 — skills set piece: pinned query console */}
-      <section ref={skillsRef} aria-label="Skills map">
+      {/* beat 3 — skills set piece: latent-space cluster inspector. Left rail =
+          the full cluster index (legend); center = passthrough window so the
+          live 3D ring is the hero; right = detail readout for the active
+          cluster. Scroll scans clusters 1→5; hover/focus overrides. */}
+      <section
+        ref={skillsRef}
+        aria-label="Skills map"
+        className="scene-passthrough"
+      >
         <div className="flex min-h-screen items-center px-5 py-16">
-          <div className="mx-auto grid w-full max-w-6xl gap-8 md:grid-cols-[1fr_1fr]">
-            <div>
+          <div className="mx-auto w-full max-w-6xl">
+            <div className="mb-10">
               <p className="sys-label mb-2">latent space · skills index</p>
-              <p className="mb-10 font-mono text-xs text-muted">
-                scroll to query the field — hover a cluster to excite it
+              <p className="font-mono text-xs text-muted">
+                scroll to scan the field — hover a cluster to excite it ·{" "}
+                <span ref={progressRef} className="text-accent">
+                  scanning 1/{skillGroups.length} · morph 0%
+                </span>
               </p>
-
-              <div className="relative min-h-[340px] motion-reduce:space-y-12">
-                {skillGroups.map((g, i) => (
-                  <div
-                    key={g.id}
-                    data-skill-group={i}
-                    className="skill-group-card absolute inset-x-0 top-0 motion-reduce:relative motion-reduce:inset-auto"
-                  >
-                    <button
-                      type="button"
-                      className="group w-full text-left focus-visible:outline-none"
-                      onMouseEnter={() => setActiveSkillGroup(g.id)}
-                      onMouseLeave={() => setActiveSkillGroup("")}
-                      onFocus={() => setActiveSkillGroup(g.id)}
-                      onBlur={() => setActiveSkillGroup("")}
-                    >
-                      <p className="font-mono text-xs text-muted">
-                        <span className="text-accent">cluster/{g.id}</span>
-                        {" · "}
-                        <span>{g.skills.length} tools</span>
-                      </p>
-                      <h3 className="mt-3 text-4xl font-medium tracking-tight sm:text-5xl">
-                        <DecodeText text={g.label} />
-                      </h3>
-                      {g.philosophy && (
-                        <p className="mt-2 font-mono text-sm text-muted/70 italic">
-                          &ldquo;{g.philosophy}&rdquo;
-                        </p>
-                      )}
-                      <div data-group-tags className="mt-5 flex flex-wrap gap-2">
-                        {g.skills.map((skill) => (
-                          <span
-                            key={skill}
-                            className="rounded border hairline px-2.5 py-1 font-mono text-xs text-text/70 transition-colors group-hover:border-accent/30 group-focus-visible:border-accent/30"
-                          >
-                            {skill}
-                          </span>
-                        ))}
-                      </div>
-                    </button>
-                  </div>
-                ))}
-              </div>
             </div>
 
-            <div className="hidden md:block" aria-hidden="true" />
+            <div className="grid gap-8 md:grid-cols-[minmax(0,260px)_1fr_minmax(0,360px)]">
+              {/* left rail — every cluster, always reachable (no overlap stack) */}
+              <ul className="space-y-1">
+                {skillGroups.map((g, i) => {
+                  const isActive = currentId === g.id;
+                  return (
+                    <li key={g.id}>
+                      <button
+                        type="button"
+                        data-interactive
+                        aria-pressed={isActive}
+                        onMouseEnter={() => excite(g.id)}
+                        onMouseLeave={release}
+                        onFocus={() => excite(g.id)}
+                        onBlur={release}
+                        style={
+                          isActive
+                            ? {
+                                borderColor: hueOf(i),
+                                backgroundColor: `${hueOf(i)}14`,
+                              }
+                            : undefined
+                        }
+                        className={`group flex w-full items-center gap-3 rounded-md border px-3 py-2.5 text-left transition-colors focus-visible:outline-none ${
+                          isActive
+                            ? ""
+                            : "border-transparent hover:border-accent/20"
+                        }`}
+                      >
+                        <span
+                          style={{ backgroundColor: hueOf(i), opacity: isActive ? 1 : 0.45 }}
+                          className={`h-1.5 w-1.5 shrink-0 rounded-full transition-opacity ${
+                            isActive ? "status-dot" : ""
+                          }`}
+                        />
+                        <span className="min-w-0 flex-1">
+                          <span className="block font-mono text-[0.7rem] text-muted">
+                            cluster/{g.id}
+                          </span>
+                          <span
+                            className={`block text-sm font-medium transition-colors ${
+                              isActive ? "text-text" : "text-text/70"
+                            }`}
+                          >
+                            {g.label}
+                          </span>
+                        </span>
+                        <span className="shrink-0 font-mono text-[0.7rem] text-muted">
+                          {g.skills.length}
+                        </span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+
+              {/* center — framed console viewport: the live 3D cluster ring
+                  shows through, bracketed so it reads as an intentional readout
+                  rather than a blank gap. The big index tracks the active
+                  cluster, tying rail → viewport → 3D field together. */}
+              <div className="relative hidden md:block" aria-hidden="true">
+                <span className="pointer-events-none absolute left-0 top-0 h-5 w-5 border-l border-t border-accent/25" />
+                <span className="pointer-events-none absolute right-0 top-0 h-5 w-5 border-r border-t border-accent/25" />
+                <span className="pointer-events-none absolute bottom-0 left-0 h-5 w-5 border-b border-l border-accent/25" />
+                <span className="pointer-events-none absolute bottom-0 right-0 h-5 w-5 border-b border-r border-accent/25" />
+                <div className="flex h-full min-h-[340px] flex-col items-center justify-center gap-2">
+                  <span className="font-mono text-[0.6rem] uppercase tracking-[0.32em] text-muted/50">
+                    latent field
+                  </span>
+                  <span
+                    style={{ color: hueOf(currentIdx), opacity: 0.32 }}
+                    className="font-mono text-7xl font-medium tabular-nums transition-colors"
+                  >
+                    {String(currentIdx + 1).padStart(2, "0")}
+                  </span>
+                  <span className="font-mono text-[0.65rem] tracking-[0.2em] text-muted/40">
+                    / {String(skillGroups.length).padStart(2, "0")} clusters
+                  </span>
+                </div>
+              </div>
+
+              {/* right — detail readout for the active cluster (fills the dead
+                  column with real content; reads the store, never writes it) */}
+              {/* read-only readout; rail buttons own the aria state (aria-pressed),
+                  so no aria-live here — a scroll-scanned region would spam SRs */}
+              <div
+                key={currentId}
+                className="skill-panel-in rounded-lg border hairline bg-elev/40 p-6"
+              >
+                <p className="font-mono text-xs">
+                  <span style={{ color: hueOf(currentIdx) }}>
+                    cluster/{activeGroup.id}
+                  </span>
+                  <span className="text-muted">
+                    {" · "}
+                    {activeGroup.skills.length} tools online
+                  </span>
+                </p>
+                <h3 className="mt-4 text-3xl font-medium tracking-tight sm:text-4xl">
+                  <DecodeText text={activeGroup.label} />
+                </h3>
+                {activeGroup.philosophy && (
+                  <p className="mt-3 border-l-2 border-accent/30 pl-3 font-mono text-sm italic text-muted/80">
+                    &ldquo;{activeGroup.philosophy}&rdquo;
+                  </p>
+                )}
+                <div className="mt-6 flex flex-wrap gap-2">
+                  {activeGroup.skills.map((skill) => (
+                    <span
+                      key={skill}
+                      className="rounded border hairline px-2.5 py-1 font-mono text-xs text-text/75"
+                    >
+                      {skill}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>

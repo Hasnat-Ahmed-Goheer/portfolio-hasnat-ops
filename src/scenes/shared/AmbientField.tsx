@@ -61,13 +61,18 @@ void main() {
 /**
  * @param radius  half-extent of the dust cloud (world units)
  * @param opacity overall multiplier (scenes with denser foregrounds dim it)
+ * @param pulse   if >0, the dust breathes outward on this period (seconds) in
+ *                addition to disturb — used by /contact so the ambient world
+ *                pulses in sync with the cluster's uplink beacon
  */
 export default function AmbientField({
   radius = 9,
   opacity = 1,
+  pulse = 0,
 }: {
   radius?: number;
   opacity?: number;
+  pulse?: number;
 }) {
   const gpuTier = useUiStore((s) => s.gpuTier);
   const theme = useUiStore((s) => s.theme);
@@ -77,6 +82,7 @@ export default function AmbientField({
   const matRef = useRef<THREE.ShaderMaterial>(null);
   const shock = useRef(0);
   const lastDisturb = useRef(0);
+  const pulseClock = useRef(0);
 
   const geometry = useMemo(() => {
     const rng = mulberry32(19);
@@ -124,6 +130,14 @@ export default function AmbientField({
     if (store.disturb !== lastDisturb.current) {
       lastDisturb.current = store.disturb;
       shock.current = 1;
+    }
+    /* optional beacon: re-arm the shock on a fixed period (uplink ping) */
+    if (pulse > 0) {
+      pulseClock.current += dt;
+      if (pulseClock.current >= pulse) {
+        pulseClock.current -= pulse;
+        shock.current = Math.max(shock.current, 0.8);
+      }
     }
     shock.current *= Math.exp(-2.2 * dt);
     u.uShock.value = shock.current;

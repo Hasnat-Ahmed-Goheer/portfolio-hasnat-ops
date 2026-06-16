@@ -52,7 +52,10 @@ export default function PipelineScene({ dim = false }: { dim?: boolean }) {
   const lastDisturb = useRef(0);
 
   const { curves, geos, mats } = useMemo(() => {
-    const rng = mulberry32(11);
+    /* dim twin (/experience) reseeds so its streams don't overlay /work's */
+    const rng = mulberry32(
+      dim ? sceneParams.pipeline.dimSeed : sceneParams.pipeline.seed
+    );
     const curves: THREE.CatmullRomCurve3[] = [];
     const geos: THREE.TubeGeometry[] = [];
     const mats: THREE.ShaderMaterial[] = [];
@@ -89,7 +92,7 @@ export default function PipelineScene({ dim = false }: { dim?: boolean }) {
       );
     }
     return { curves, geos, mats };
-  }, []);
+  }, [dim]);
 
   useEffect(
     () => () => {
@@ -114,11 +117,23 @@ export default function PipelineScene({ dim = false }: { dim?: boolean }) {
     }
     shock.current *= Math.exp(-2.2 * dt);
 
+    /* /experience reads as a recorded log being replayed: a playhead sweeps a
+       bright highlight down the streams (vs /work's hover-driven boost) */
+    const head = dim ? (t * 0.45) % TUBES : 0;
+
     for (let k = 0; k < TUBES; k++) {
-      const target = k === activeTube ? 1 : 0;
+      let target: number;
+      if (dim) {
+        let d = Math.abs(head - k);
+        d = Math.min(d, TUBES - d); /* wrap so the sweep loops seamlessly */
+        target = Math.max(0, 1 - d) * 0.7;
+      } else {
+        target = k === activeTube ? 1 : 0;
+      }
       boosts.current[k] += (target - boosts.current[k]) * 0.1;
       const u = mats[k].uniforms;
-      u.uTime.value += dt * (dim ? 0.45 : 1) * (1 + shock.current * 3);
+      /* dim → negative time so dashes scroll backward (replay/rewind feel) */
+      u.uTime.value += dt * (dim ? -0.5 : 1) * (1 + shock.current * 3);
       u.uBoost.value = Math.min(boosts.current[k] + shock.current, 1.2);
       u.uOpacity.value = dim ? 0.35 : 0.95;
       const c = k % 4 === 3 ? colors.accent3 : colors.accent;
@@ -132,7 +147,9 @@ export default function PipelineScene({ dim = false }: { dim?: boolean }) {
       for (let k = 0; k < TUBES; k++) {
         for (let p = 0; p < PACKETS; p++) {
           const speed = (dim ? 0.018 : 0.045) * (1 + k * 0.13);
-          const at = (t * speed + p / PACKETS + k * 0.21) % 1;
+          /* dim packets ride backward, in step with the rewound dashes */
+          const dir = dim ? -1 : 1;
+          const at = (((t * speed * dir + p / PACKETS + k * 0.21) % 1) + 1) % 1;
           /* write straight into dummy.position — getPointAt without a
              target allocates a Vector3 per packet per frame */
           curves[k].getPointAt(at, dummy.position);

@@ -186,13 +186,23 @@ body {
     animation: none;
     opacity: 0;
   }
-  .skill-group-card {
-    opacity: 1 !important;
-    transform: none !important;
+  .skill-panel-in {
+    animation: none;
   }
   .subsystem-card::after {
     animation: none;
   }
+}
+
+/* skills cluster-inspector: the detail panel fades in when the active cluster
+   swaps (key change remounts it). Opacity-only — never a transform, since this
+   lives inside the pinned skills section (CLAUDE.md pitfall #1). */
+@keyframes skill-panel-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.skill-panel-in {
+  animation: skill-panel-in 0.4s ease-out;
 }
 
 /* subsystem card: accent glow on hover/focus */

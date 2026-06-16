@@ -15,6 +15,7 @@ import { useSceneStore } from "@/stores/sceneStore";
 import { useUiStore } from "@/stores/uiStore";
 import { mulberry32 } from "../shared/rng";
 import { glslSimplexNoise } from "../shared/noise.glsl";
+import { clusterAccent } from "@/lib/color";
 import AmbientField from "../shared/AmbientField";
 
 const SKILL_GROUP_IDS = ["frontend", "backend", "cloud", "ai-data", "architecture"];
@@ -95,6 +96,7 @@ ${useNoise ? FLOW_NOISE : FLOW_CHEAP}
 
 const FRAG = /* glsl */ `
 uniform vec3 uColor;
+uniform vec3 uActiveColor;
 varying float vActive;
 varying float vFade;
 varying float vTwinkle;
@@ -111,9 +113,10 @@ void main() {
   /* far points recede into the void for depth */
   a *= mix(1.0, 0.35, vDepth);
   if (a < 0.01) discard;
-  /* stay in-hue (no cyan): the queried cluster intensifies in its own colour,
-     and fast flow adds energy — brightness, never a hue shift */
-  vec3 col = uColor * (1.0 + vActive * 1.1);
+  /* the queried cluster shifts to its OWN tint and intensifies; everything
+     else stays in the base hue. Fast flow adds energy as brightness. */
+  vec3 base = mix(uColor, uActiveColor, vActive);
+  vec3 col = base * (1.0 + vActive * 1.1);
   col *= 1.0 + vFlow * 0.45 * (1.0 - vActive);
   col += core * 0.25;
   gl_FragColor = vec4(col, a);
@@ -192,6 +195,7 @@ export default function LatentScene({
       uPointer: { value: new THREE.Vector3(99, 99, 99) },
       uSize: { value: 1.6 },
       uColor: { value: new THREE.Color("#8b5cf6") },
+      uActiveColor: { value: new THREE.Color("#8b5cf6") },
     }),
     []
   );
@@ -200,6 +204,17 @@ export default function LatentScene({
   useEffect(() => {
     if (matRef.current) matRef.current.uniforms.uColor.value.set(colorTarget);
   }, [colorTarget]);
+
+  /* per-cluster tints (theme-derived hue band) so the queried cluster glows in
+     its OWN colour — the same hues the About rail dots use, tying DOM ↔ 3D */
+  const clusterColors = useMemo(
+    () =>
+      SKILL_GROUP_IDS.map(
+        (_, i) =>
+          new THREE.Color(clusterAccent(colorTarget, i, SKILL_GROUP_IDS.length))
+      ),
+    [colorTarget]
+  );
 
   useFrame((state, delta) => {
     const mat = matRef.current;
@@ -224,6 +239,12 @@ export default function LatentScene({
       ? SKILL_GROUP_IDS.indexOf(activeId)
       : -1;
     u.uActive.value += (targetActive - u.uActive.value) * 0.12;
+    /* point the active-tint uniform at whichever cluster is currently nearest
+       (no alloc — copy into the existing Color) */
+    const idx = Math.round(u.uActive.value);
+    if (idx >= 0 && idx < clusterColors.length) {
+      (u.uActiveColor.value as THREE.Color).copy(clusterColors[idx]);
+    }
 
     /* pointer in world space (plane z≈0) */
     const cam = state.camera;

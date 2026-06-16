@@ -53,13 +53,20 @@ export default function ClusterScene({ dim = false }: { dim?: boolean }) {
   const lastDisturb = useRef(0);
   /* pending click shockwave origin (-1 = none), consumed in useFrame */
   const shockId = useRef(-1);
+  /* /contact uplink beacon: a bright ring expands from origin on a fixed
+     period, in sync with the ambient dust pulse (dim variant only) */
+  const pingClock = useRef(0);
+  const pingRadius = useRef(99);
   /* fling: track drag-point velocity so release throws the node */
   const dragVel = useMemo(() => new Float32Array(2), []);
   const prevDrag = useMemo(() => new THREE.Vector3(), []);
   const dragging = useRef(false);
 
   const { bases, phases, sizes, links, neighbors } = useMemo(() => {
-    const rng = mulberry32(42);
+    /* dim twin (/contact) reseeds so its hive doesn't overlay the home scene */
+    const rng = mulberry32(
+      dim ? sceneParams.cluster.dimSeed : sceneParams.cluster.seed
+    );
     const bases: THREE.Vector3[] = [];
     const phases = new Float32Array(count);
     const sizes = new Float32Array(count);
@@ -90,7 +97,7 @@ export default function ClusterScene({ dim = false }: { dim?: boolean }) {
       }
     }
     return { bases, phases, sizes, links, neighbors };
-  }, [count]);
+  }, [count, dim]);
 
   /* mutable physics state */
   const off = useMemo(() => new Float32Array(count * 3), [count]);
@@ -182,6 +189,18 @@ export default function ClusterScene({ dim = false }: { dim?: boolean }) {
     if (store.disturb !== lastDisturb.current) {
       lastDisturb.current = store.disturb;
       for (let i = 0; i < count * 3; i++) vel[i] += (Math.random() - 0.5) * 6;
+    }
+
+    /* uplink beacon (/contact): re-arm a ring at origin every pingPeriod, then
+       let it expand outward — nodes/links it crosses flare, the dust pulses */
+    if (dim) {
+      const { pingPeriod, pingSpeed, pingExtent } = sceneParams.cluster;
+      pingClock.current += dt;
+      if (pingClock.current >= pingPeriod) {
+        pingClock.current -= pingPeriod;
+        pingRadius.current = 0;
+      }
+      if (pingRadius.current < pingExtent) pingRadius.current += dt * pingSpeed;
     }
 
     /* kubectl delete pod <name>: evict a matching (or any) live node — it
@@ -303,8 +322,20 @@ export default function ClusterScene({ dim = false }: { dim?: boolean }) {
         hov === i ? 2.1 : hovNeighbors && hovNeighbors.includes(i) ? 1.45 : 1;
       hoverScale[i] += (targetScale - hoverScale[i]) * 0.15;
 
+      /* beacon shell: nodes near the expanding ping radius flare, fading as
+         the ring dissipates outward */
+      let ping = 0;
+      if (dim) {
+        const r = Math.sqrt(x * x + y * y + z * z) - pingRadius.current;
+        ping =
+          Math.exp(-r * r * 1.2) *
+          Math.max(0, 1 - pingRadius.current / sceneParams.cluster.pingExtent);
+      }
+
       dummy.position.set(x, y, z);
-      dummy.scale.setScalar(0.085 * sizes[i] * hoverScale[i] * life[i]);
+      dummy.scale.setScalar(
+        0.085 * sizes[i] * hoverScale[i] * life[i] * (1 + ping * 1.6)
+      );
       dummy.updateMatrix();
       mesh.setMatrixAt(i, dummy.matrix);
     }
@@ -328,7 +359,18 @@ export default function ClusterScene({ dim = false }: { dim?: boolean }) {
       const target = !dim && hov >= 0 && (a === hov || b === hov) ? 1 : base;
       linkGlow[l] += (target - linkGlow[l]) * 0.18;
       /* a link is only as bright as its dimmer (or despawning) endpoint */
-      const g = linkGlow[l] * Math.min(life[a], life[b]);
+      let g = linkGlow[l] * Math.min(life[a], life[b]);
+      /* uplink beacon ring sweeps brightness through the links it crosses */
+      if (dim) {
+        const mx = (linePos[l6] + linePos[l6 + 3]) * 0.5;
+        const my = (linePos[l6 + 1] + linePos[l6 + 4]) * 0.5;
+        const mz = (linePos[l6 + 2] + linePos[l6 + 5]) * 0.5;
+        const r = Math.sqrt(mx * mx + my * my + mz * mz) - pingRadius.current;
+        g +=
+          Math.exp(-r * r * 1.2) *
+          Math.max(0, 1 - pingRadius.current / sceneParams.cluster.pingExtent) *
+          0.5;
+      }
       lineCol[l6] = lineCol[l6 + 1] = lineCol[l6 + 2] = g;
       lineCol[l6 + 3] = lineCol[l6 + 4] = lineCol[l6 + 5] = g;
     }
@@ -397,7 +439,11 @@ export default function ClusterScene({ dim = false }: { dim?: boolean }) {
 
   return (
     <group>
-      <AmbientField opacity={dim ? 0.45 : 0.8} radius={10} />
+      <AmbientField
+        opacity={dim ? 0.45 : 0.8}
+        radius={10}
+        pulse={dim ? sceneParams.cluster.pingPeriod : 0}
+      />
       <instancedMesh
         ref={meshRef}
         args={[undefined, undefined, count]}
