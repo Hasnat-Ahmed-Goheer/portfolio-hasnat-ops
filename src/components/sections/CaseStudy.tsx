@@ -41,7 +41,7 @@ export default function CaseStudy({ project }: { project: Project }) {
           <p className="mt-4 max-w-2xl text-lg text-muted">{project.tagline}</p>
           <dl className="mt-10 grid max-w-3xl grid-cols-1 gap-x-10 gap-y-3 border-t hairline pt-6 font-mono text-xs sm:grid-cols-2">
             {meta.map(([k, v]) => (
-              <div key={k} className="flex gap-3" data-interactive>
+              <div key={k} className="flex items-baseline gap-3" data-interactive>
                 <dt className="w-14 shrink-0 text-muted">{k}:</dt>
                 <dd className={k === "status" ? "text-ok" : "text-text/85"}>
                   {v}
@@ -155,8 +155,8 @@ export default function CaseStudy({ project }: { project: Project }) {
           <div className="max-w-3xl space-y-4">
             {project.outcomes.map((o, i) => (
               <Reveal key={i} delay={i * 0.06}>
-                <p className="flex gap-3 font-mono text-sm">
-                  <span className="text-ok">[ ok ]</span>
+                <p className="flex items-baseline gap-3 font-mono text-sm">
+                  <span className="shrink-0 text-ok">[ ok ]</span>
                   <span className="text-text/90">{o}</span>
                 </p>
               </Reveal>

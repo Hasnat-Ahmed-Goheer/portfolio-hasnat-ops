@@ -79,7 +79,7 @@ export default function CanvasRoot() {
   /* PerformanceMonitor flips this under sustained low FPS: DPR drops to 1
      and postprocessing is disabled — graceful degradation per PLAN §E */
   const [degraded, setDegraded] = useState(false);
-  const [eventSource, setEventSource] = useState<HTMLElement | null>(null);
+  const [eventSource, setEventSource] = useState<HTMLElement | undefined>(undefined);
 
   /* crossfade scene swap — fast on purpose: during a route change the opaque
      RouteCurtain covers the viewport, so the whole fade-out → swap → fade-in
@@ -108,9 +108,13 @@ export default function CanvasRoot() {
     return () => clearTimeout(t);
   }, [sceneReady]);
 
-  /* pause rendering when tab hidden */
+  /* pause rendering when tab hidden; only wire R3F pointer events on
+     fine-pointer (mouse) devices — touch devices need all events for scroll */
+  const [mounted, setMounted] = useState(false);
   useEffect(() => {
-    setEventSource(document.body);
+    setMounted(true);
+    const isFinePointer = window.matchMedia("(pointer: fine)").matches;
+    if (isFinePointer) setEventSource(document.body);
     const onVis = () => setPaused(document.hidden);
     document.addEventListener("visibilitychange", onVis);
     return () => document.removeEventListener("visibilitychange", onVis);
@@ -130,7 +134,7 @@ export default function CanvasRoot() {
     );
   }
 
-  if (!eventSource) return null;
+  if (!mounted) return null;
 
   return (
     <div
@@ -147,8 +151,7 @@ export default function CanvasRoot() {
            nothing visible here and costs a full-screen multisample resolve */
         gl={{ antialias: false, powerPreference: "high-performance", alpha: true }}
         frameloop={paused ? "never" : "always"}
-        eventSource={eventSource}
-        eventPrefix="client"
+        {...(eventSource ? { eventSource, eventPrefix: "client" as const } : {})}
       >
         <PerformanceMonitor
           onDecline={() => setDegraded(true)}

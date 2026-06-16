@@ -120,6 +120,7 @@ body {
   position: fixed;
   inset: 0;
   z-index: 0;
+  pointer-events: none;
   /* fast: the per-route swap happens hidden under the route curtain, and the
      first-load reveal rides the boot fade — a long fade here only ever lagged */
   transition: opacity 0.25s ease;
