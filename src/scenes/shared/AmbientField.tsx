@@ -20,10 +20,8 @@ import { themes } from "@/config/theme";
 import { useUiStore } from "@/stores/uiStore";
 import { useSceneStore } from "@/stores/sceneStore";
 import { mulberry32 } from "./rng";
-import { glslSimplexNoise } from "./noise.glsl";
 
 const VERT = /* glsl */ `
-${glslSimplexNoise}
 uniform float uTime;
 uniform float uShock;
 uniform float uOpacity;
@@ -31,10 +29,15 @@ attribute float aRand;
 varying float vAlpha;
 void main() {
   vec3 p = position;
-  /* one simplex eval drives a gentle uniform drift — same noise field as the
-     latent scene, so the world's motion language is consistent */
-  float n = snoise(p * 0.12 + vec3(0.0, 0.0, uTime * 0.03));
-  p += vec3(n, n * 0.7, n * 0.5) * (0.18 + aRand * 0.32);
+  /* cheap trig drift — no per-vertex simplex. This field renders behind EVERY
+     scene, so it has to be nearly free; at dust density a couple of sin/cos
+     read the same as a noise field for a fraction of the cost */
+  float t = uTime + aRand * 6.2831;
+  p += vec3(
+    sin(p.y * 0.4 + t * 0.30),
+    cos(p.z * 0.4 + t * 0.25),
+    sin(p.x * 0.4 + t * 0.28)
+  ) * (0.16 + aRand * 0.30);
   /* shared shockwave: the dust breathes outward with the foreground */
   p += normalize(p + 0.0001) * uShock * (0.4 + aRand * 0.6);
   vec4 mv = modelViewMatrix * vec4(p, 1.0);
@@ -69,7 +72,7 @@ export default function AmbientField({
   const gpuTier = useUiStore((s) => s.gpuTier);
   const theme = useUiStore((s) => s.theme);
   const colors = themes[theme];
-  const count = gpuTier === "mobile" ? 600 : 1600;
+  const count = gpuTier === "mobile" ? 450 : 1100;
 
   const matRef = useRef<THREE.ShaderMaterial>(null);
   const shock = useRef(0);

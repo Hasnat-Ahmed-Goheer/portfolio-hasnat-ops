@@ -14,7 +14,7 @@ import { themes } from "@/config/theme";
 import { useSceneStore } from "@/stores/sceneStore";
 import { useUiStore } from "@/stores/uiStore";
 import { mulberry32 } from "../shared/rng";
-import { glslSimplexNoise, glslCurlNoise } from "../shared/noise.glsl";
+import { glslSimplexNoise } from "../shared/noise.glsl";
 import AmbientField from "../shared/AmbientField";
 
 /* simplex flow field (full tier): organic drift while loose, settling into the
@@ -22,8 +22,12 @@ import AmbientField from "../shared/AmbientField";
    GPU only. */
 const FLOW_NOISE = /* glsl */ `
   float drift = 1.0 - uMorph * 0.72;
-  vec3 flow = snoiseVec3(pos * 0.3 + vec3(0.0, 0.0, uTime * 0.06));
-  vFlow = clamp(length(flow.xy) * 0.5, 0.0, 1.0);
+  /* single snoise eval (was snoiseVec3 = 3 evals). At this point density the
+     scalar-driven displacement is visually indistinguishable, for ~3x less
+     vertex-noise cost — the main 60fps lever on the about page. */
+  float n = snoise(pos * 0.3 + vec3(0.0, 0.0, uTime * 0.06));
+  vec3 flow = vec3(n, n * 0.8, n * 0.5);
+  vFlow = clamp(abs(n) * 0.7, 0.0, 1.0);
   pos += flow * (0.4 + aRand * 0.28) * drift;
 `;
 
@@ -42,7 +46,7 @@ const FLOW_CHEAP = /* glsl */ `
 
 /* the noise chunks are only compiled into the full-tier variant */
 const makeVert = (useNoise: boolean) => /* glsl */ `
-${useNoise ? glslSimplexNoise + glslCurlNoise : ""}
+${useNoise ? glslSimplexNoise : ""}
 uniform float uTime;
 uniform float uMorph;
 uniform float uActive;
@@ -190,15 +194,17 @@ export default function LatentScene({
     []
   );
 
+  const colorTarget = variant === "lab" ? colors.accent2 : colors.accent3;
+  useEffect(() => {
+    if (matRef.current) matRef.current.uniforms.uColor.value.set(colorTarget);
+  }, [colorTarget]);
+
   useFrame((state, delta) => {
     const mat = matRef.current;
     if (!mat) return;
     const store = useSceneStore.getState();
     const u = mat.uniforms;
     u.uTime.value += Math.min(delta, 0.05);
-
-    /* theme/variant colors (cheap to set every frame) */
-    u.uColor.value.set(variant === "lab" ? colors.accent2 : colors.accent3);
 
     const targetMorph = variant === "lab" ? 0 : store.progress;
     u.uMorph.value += (targetMorph - u.uMorph.value) * 0.06;
