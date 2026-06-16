@@ -3,11 +3,6 @@ import type { SkillGroup } from "./types";
 /** 5 groups = the 5 particle clusters in the About latent-space scene. */
 export const skillGroups: SkillGroup[] = [
   {
-    id: "languages",
-    label: "Languages",
-    skills: ["TypeScript", "JavaScript (ES6+)", "Python", "C++", "SQL"],
-  },
-  {
     id: "frontend",
     label: "Frontend",
     skills: [
@@ -24,27 +19,28 @@ export const skillGroups: SkillGroup[] = [
     id: "backend",
     label: "Backend",
     skills: [
-      "NestJS",
       "Node.js",
+      "NestJS",
       "Express.js",
       "FastAPI",
       "RESTful APIs",
-      "WebSockets",
       "JWT Auth",
       "OAuth 2.0",
       "Stripe Connect",
+      "Google Calendar API",
+      "Google Meet API",
     ],
   },
   {
     id: "cloud",
-    label: "Cloud & Infra",
+    label: "Cloud & DevOps",
     skills: [
+      "AWS (S3 · EC2 · Lambda · ELB · API GW · VPC)",
+      "GCP",
+      "Docker",
       "Kubernetes",
       "Helm",
       "Rancher",
-      "Docker",
-      "AWS (S3 · EC2 · Lambda · ELB · API GW · VPC)",
-      "GCP",
       "GitHub Actions",
       "NGINX",
       "Linux",
@@ -52,17 +48,31 @@ export const skillGroups: SkillGroup[] = [
   },
   {
     id: "ai-data",
-    label: "AI & Data",
+    label: "AI & Databases",
     skills: [
       "RAG",
-      "Multi-modal AI",
+      "Multi-modal AI Systems",
       "Gemini API",
       "Pinecone",
       "PostgreSQL",
-      "MongoDB",
       "DynamoDB",
+      "MongoDB",
       "Prisma ORM",
       "Firebase",
+    ],
+  },
+  {
+    id: "architecture",
+    label: "Architecture & Design",
+    skills: [
+      "Microservices Architecture",
+      "Clean Architecture",
+      "Event-Driven Design",
+      "TypeScript",
+      "JavaScript (ES6+)",
+      "Python",
+      "C++",
+      "SQL",
     ],
   },
 ];

@@ -363,10 +363,11 @@ export const commands: Record<string, Command> = {
         fps >= 50 ? "ok" : "err"
       );
       push("  PID   COMMAND                       CPU   STATE", "dim");
-      push("  2026  stack8s/full-surface          93%   running", "ok");
+      push("  2026  stack8s/marketplace           93%   running", "ok");
+      push("  2026  stack8s/workload-platform     91%   running", "ok");
       push("  2025  wanile/diy-gc-platform        88%   shipped");
-      push("  2025  swapfans/frontend             71%   shipped");
-      push("  2024  techvaganza/lead              80%   shipped");
+      push("  2025  swapfans/ai-platform          71%   shipped");
+      push("  2024  techvaganza/corporate         80%   shipped");
       push("  2024  aris-rails/tracking           76%   shipped");
       push("  2023  intellogeek/lms               68%   shipped");
     },

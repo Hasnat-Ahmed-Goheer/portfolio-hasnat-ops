@@ -90,7 +90,7 @@ export default function WorkIndex() {
         </div>
         <Reveal className="mx-auto mt-12 max-w-6xl">
           <p className="font-mono text-xs text-muted">
-            tip: ⌘K → <span className="text-accent">open rag-assistant</span>
+            tip: ⌘K → <span className="text-accent">open diy-gc-platform</span>
           </p>
         </Reveal>
       </section>

@@ -258,6 +258,22 @@ export default function AboutSections() {
         </div>
       </section>
 
+      {/* beat 5.5 — education */}
+      <section className="relative border-t hairline px-5 py-16" aria-label="Education">
+        <div className="mx-auto max-w-6xl">
+          <Reveal>
+            <p className="sys-label mb-6">education</p>
+            <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
+              <div>
+                <p className="text-lg font-medium">{profile.education.institution}</p>
+                <p className="text-sm text-muted">{profile.education.degree} · CGPA: {profile.education.gpa}</p>
+              </div>
+              <p className="shrink-0 font-mono text-xs text-muted">{profile.education.period}</p>
+            </div>
+          </Reveal>
+        </div>
+      </section>
+
       {/* beat 6 — closing uplink CTA so the page ends deliberately */}
       <section className="relative border-t hairline px-5 py-28" aria-label="Get in touch">
         <div className="mx-auto max-w-6xl text-center">

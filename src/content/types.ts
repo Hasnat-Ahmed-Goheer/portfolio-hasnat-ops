@@ -5,6 +5,13 @@ export interface Social {
   href: string;
 }
 
+export interface Education {
+  institution: string;
+  degree: string;
+  period: string;
+  gpa: string;
+}
+
 export interface Profile {
   name: string;
   handle: string;
@@ -14,6 +21,7 @@ export interface Profile {
   availability: string;
   shortBio: string;
   longBio: string[];
+  education: Education;
   socials: Social[];
   resumeUrl: string;
 }
