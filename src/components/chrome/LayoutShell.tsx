@@ -97,7 +97,7 @@ export default function LayoutShell({ children }: { children: ReactNode }) {
 
   if (reducedMotion) return content;
   return (
-    <ReactLenis root options={{ autoRaf: false, lerp: 0.11 }} ref={lenisRef}>
+    <ReactLenis root options={{ autoRaf: false, lerp: 0.11, syncTouch: true, syncTouchLerp: 0.1, touchMultiplier: 1.5 }} ref={lenisRef}>
       {content}
     </ReactLenis>
   );
