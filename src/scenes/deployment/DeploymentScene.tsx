@@ -10,14 +10,25 @@ import { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
 import { sceneParams } from "@/config/console";
+import { themes } from "@/config/theme";
 import { useSceneStore } from "@/stores/sceneStore";
 import { useUiStore } from "@/stores/uiStore";
 import type { MotifKey } from "@/content/types";
+import AmbientField from "../shared/AmbientField";
 
 export default function DeploymentScene() {
   const gpuTier = useUiStore((s) => s.gpuTier);
+  const theme = useUiStore((s) => s.theme);
+  const colors = themes[theme];
   const motif = useSceneStore((s) => s.motif);
   const accent = useSceneStore((s) => s.motifAccent);
+  /* pods keep the project's identity colour but are pulled 35% toward the
+     system cyan so every project page still belongs to the same palette;
+     the wireframe core stays pure cyan as the persistent system thread */
+  const podColor = useMemo(
+    () => new THREE.Color(accent).lerp(new THREE.Color(colors.accent), 0.35),
+    [accent, colors.accent]
+  );
   const count =
     gpuTier === "mobile"
       ? sceneParams.deployment.mobilePods
@@ -79,13 +90,14 @@ export default function DeploymentScene() {
 
   return (
     <group>
+      <AmbientField opacity={0.8} radius={9} />
       <mesh ref={coreRef}>
         <icosahedronGeometry args={[0.85, 1]} />
-        <meshBasicMaterial color={accent} wireframe toneMapped={false} />
+        <meshBasicMaterial color={colors.accent} wireframe toneMapped={false} />
       </mesh>
       <instancedMesh ref={podsRef} args={[undefined, undefined, count]}>
         <boxGeometry args={[0.22, 0.22, 0.22]} />
-        <meshBasicMaterial color={accent} toneMapped={false} />
+        <meshBasicMaterial color={podColor} toneMapped={false} />
       </instancedMesh>
       <OrbitControls
         makeDefault

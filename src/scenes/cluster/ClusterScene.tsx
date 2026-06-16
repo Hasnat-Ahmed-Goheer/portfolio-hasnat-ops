@@ -15,6 +15,7 @@ import { themes } from "@/config/theme";
 import { useSceneStore } from "@/stores/sceneStore";
 import { useUiStore } from "@/stores/uiStore";
 import { mulberry32 } from "../shared/rng";
+import AmbientField from "../shared/AmbientField";
 
 const CENTERS = [
   new THREE.Vector3(-2.2, 0.7, 0),
@@ -363,8 +364,9 @@ export default function ClusterScene({ dim = false }: { dim?: boolean }) {
     /* camera: scroll push-in + cursor parallax */
     const targetZ = (dim ? 10.5 : 9) - store.progress * 3.6;
     cam.position.z += (targetZ - cam.position.z) * 0.05;
-    cam.position.x += (state.pointer.x * 0.7 - cam.position.x) * 0.04;
-    cam.position.y += (state.pointer.y * 0.4 - cam.position.y) * 0.04;
+    /* shared cursor-parallax feel across scenes (see PipelineScene) */
+    cam.position.x += (state.pointer.x * 0.5 - cam.position.x) * 0.04;
+    cam.position.y += (state.pointer.y * 0.3 - cam.position.y) * 0.04;
     cam.lookAt(0, 0, 0);
   });
 
@@ -395,6 +397,7 @@ export default function ClusterScene({ dim = false }: { dim?: boolean }) {
 
   return (
     <group>
+      <AmbientField opacity={dim ? 0.45 : 0.8} radius={10} />
       <instancedMesh
         ref={meshRef}
         args={[undefined, undefined, count]}
@@ -402,7 +405,9 @@ export default function ClusterScene({ dim = false }: { dim?: boolean }) {
         onPointerOut={onOut}
         onPointerDown={onDown}
       >
-        <icosahedronGeometry args={[1, 2]} />
+        {/* detail 1 (80 tris) — these render at ~0.085 scale, so detail 2's
+            320 tris/node were 4× the geometry for no visible gain */}
+        <icosahedronGeometry args={[1, 1]} />
         <meshBasicMaterial toneMapped={false} transparent opacity={dim ? 0.6 : 1} />
       </instancedMesh>
       <lineSegments geometry={lineGeo}>

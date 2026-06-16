@@ -11,12 +11,38 @@ import { useEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { sceneParams } from "@/config/console";
 import { themes } from "@/config/theme";
-import { skillGroups } from "@/content/skills";
 import { useSceneStore } from "@/stores/sceneStore";
 import { useUiStore } from "@/stores/uiStore";
 import { mulberry32 } from "../shared/rng";
+import { glslSimplexNoise, glslCurlNoise } from "../shared/noise.glsl";
+import AmbientField from "../shared/AmbientField";
 
-const VERT = /* glsl */ `
+/* simplex flow field (full tier): organic drift while loose, settling into the
+   clusters as uMorph→1. A single snoiseVec3 (3 noise evals) — rich, but real
+   GPU only. */
+const FLOW_NOISE = /* glsl */ `
+  float drift = 1.0 - uMorph * 0.72;
+  vec3 flow = snoiseVec3(pos * 0.3 + vec3(0.0, 0.0, uTime * 0.06));
+  vFlow = clamp(length(flow.xy) * 0.5, 0.0, 1.0);
+  pos += flow * (0.4 + aRand * 0.28) * drift;
+`;
+
+/* cheap trig drift (mobile / software renderers): same loose→settled feel and
+   amplitude with zero noise evals, so weak GPUs match main's speed. */
+const FLOW_CHEAP = /* glsl */ `
+  float drift = 1.0 - uMorph * 0.72;
+  vec3 flow = vec3(
+    sin(pos.y * 0.6 + uTime * 0.5 + aRand * 6.2831),
+    cos(pos.z * 0.6 + uTime * 0.4 + aRand * 6.2831),
+    sin(pos.x * 0.6 + uTime * 0.45 + aRand * 6.2831)
+  ) * 0.4;
+  vFlow = clamp(length(flow.xy) * 0.5, 0.0, 1.0);
+  pos += flow * (0.4 + aRand * 0.28) * drift;
+`;
+
+/* the noise chunks are only compiled into the full-tier variant */
+const makeVert = (useNoise: boolean) => /* glsl */ `
+${useNoise ? glslSimplexNoise + glslCurlNoise : ""}
 uniform float uTime;
 uniform float uMorph;
 uniform float uActive;
@@ -29,14 +55,14 @@ attribute float aRand;
 varying float vActive;
 varying float vFade;
 varying float vTwinkle;
+varying float vDepth;
+varying float vFlow;
 
 void main() {
   vTwinkle = 0.72 + 0.28 * sin(uTime * 1.6 + aRand * 40.0);
   vec3 pos = mix(position, aTarget, uMorph);
-  float drift = 1.0 - uMorph * 0.65;
-  pos.x += sin(uTime * 0.30 + aRand * 6.2831 + pos.y * 0.55) * 0.20 * drift;
-  pos.y += cos(uTime * 0.24 + aRand * 12.566 + pos.x * 0.45) * 0.20 * drift;
-  pos.z += sin(uTime * 0.18 + aRand * 9.42) * 0.15 * drift;
+
+${useNoise ? FLOW_NOISE : FLOW_CHEAP}
 
   vec3 d = pos - uPointer;
   float dist = length(d);
@@ -51,6 +77,8 @@ void main() {
   vFade = uActive < -0.5 ? 1.0 : mix(0.22, 1.0, sel);
 
   vec4 mv = modelViewMatrix * vec4(pos, 1.0);
+  /* depth atmosphere: 0 near → 1 far (frag dims distant points, DoF-ish) */
+  vDepth = clamp((-mv.z - 4.0) / 9.0, 0.0, 1.0);
   /* 26/-z ⇒ ~2–7px points at the resting camera (z≈8.5). The original
      220/-z constant meant 30–90px additive points — a full-screen washout
      that was never caught because the shader didn't compile until now. */
@@ -61,16 +89,27 @@ void main() {
 
 const FRAG = /* glsl */ `
 uniform vec3 uColor;
-uniform vec3 uColorActive;
 varying float vActive;
 varying float vFade;
 varying float vTwinkle;
+varying float vDepth;
+varying float vFlow;
 
 void main() {
   float d = length(gl_PointCoord - 0.5);
-  float a = smoothstep(0.5, 0.08, d) * 0.62 * vFade * vTwinkle;
+  /* two-stop sprite: soft halo + a hot core that feeds bloom — a luminous
+     point instead of a flat additive disc */
+  float halo = smoothstep(0.5, 0.06, d);
+  float core = pow(smoothstep(0.32, 0.0, d), 1.6);
+  float a = (halo * 0.5 + core * 0.85) * vFade * vTwinkle;
+  /* far points recede into the void for depth */
+  a *= mix(1.0, 0.35, vDepth);
   if (a < 0.01) discard;
-  vec3 col = mix(uColor, uColorActive, vActive);
+  /* stay in-hue (no cyan): the queried cluster intensifies in its own colour,
+     and fast flow adds energy — brightness, never a hue shift */
+  vec3 col = uColor * (1.0 + vActive * 1.1);
+  col *= 1.0 + vFlow * 0.45 * (1.0 - vActive);
+  col += core * 0.25;
   gl_FragColor = vec4(col, a);
 }
 `;
@@ -87,6 +126,12 @@ export default function LatentScene({
     gpuTier === "mobile"
       ? sceneParams.latent.mobilePoints
       : sceneParams.latent.points;
+
+  /* full tier gets the simplex flow field; mobile/software gets the cheap
+     trig drift (matches main's speed). Keyed below so it recompiles on tier
+     change rather than silently keeping the first variant. */
+  const useNoise = gpuTier === "full";
+  const vert = useMemo(() => makeVert(useNoise), [useNoise]);
 
   const matRef = useRef<THREE.ShaderMaterial>(null);
   const groupRef = useRef<THREE.Group>(null);
@@ -141,7 +186,6 @@ export default function LatentScene({
       uPointer: { value: new THREE.Vector3(99, 99, 99) },
       uSize: { value: 1.6 },
       uColor: { value: new THREE.Color("#8b5cf6") },
-      uColorActive: { value: new THREE.Color("#22d3ee") },
     }),
     []
   );
@@ -155,7 +199,6 @@ export default function LatentScene({
 
     /* theme/variant colors (cheap to set every frame) */
     u.uColor.value.set(variant === "lab" ? colors.accent2 : colors.accent3);
-    u.uColorActive.value.set(colors.accent);
 
     const targetMorph = variant === "lab" ? 0 : store.progress;
     u.uMorph.value += (targetMorph - u.uMorph.value) * 0.06;
@@ -168,8 +211,10 @@ export default function LatentScene({
     shock.current *= Math.exp(-2 * Math.min(delta, 0.05));
     u.uShock.value = shock.current;
 
-    const idx = skillGroups.findIndex((g) => g.id === store.activeSkillGroup);
-    u.uActive.value = variant === "lab" ? -1 : idx;
+    /* hover excite disabled by design: no colour/brightness shift when the
+       pointer moves over the field (uActive < -0.5 ⇒ every point stays its
+       own hue at full fade) */
+    u.uActive.value = -1;
 
     /* pointer in world space (plane z≈0) */
     const cam = state.camera;
@@ -183,18 +228,21 @@ export default function LatentScene({
         Math.sin(state.clock.elapsedTime * 0.05) * 0.12 + state.pointer.x * 0.05;
       groupRef.current.rotation.x = state.pointer.y * 0.03;
     }
-    cam.position.x += (state.pointer.x * 0.4 - cam.position.x) * 0.03;
-    cam.position.y += (state.pointer.y * 0.25 - cam.position.y) * 0.03;
+    /* shared cursor-parallax feel across scenes (see PipelineScene) */
+    cam.position.x += (state.pointer.x * 0.5 - cam.position.x) * 0.04;
+    cam.position.y += (state.pointer.y * 0.3 - cam.position.y) * 0.04;
     cam.position.z += (8.5 - cam.position.z) * 0.04;
     cam.lookAt(0, 0, 0);
   });
 
   return (
     <group ref={groupRef}>
+      <AmbientField opacity={variant === "lab" ? 0.4 : 0.35} radius={11} />
       <points geometry={geometry}>
         <shaderMaterial
+          key={useNoise ? "flow-noise" : "flow-cheap"}
           ref={matRef}
-          vertexShader={VERT}
+          vertexShader={vert}
           fragmentShader={FRAG}
           uniforms={uniforms}
           transparent

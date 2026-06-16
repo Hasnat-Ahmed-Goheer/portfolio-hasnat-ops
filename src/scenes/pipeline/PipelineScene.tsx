@@ -14,6 +14,7 @@ import { themes } from "@/config/theme";
 import { useSceneStore } from "@/stores/sceneStore";
 import { useUiStore } from "@/stores/uiStore";
 import { mulberry32 } from "../shared/rng";
+import AmbientField from "../shared/AmbientField";
 
 const VERT = /* glsl */ `
 varying vec2 vUv;
@@ -153,6 +154,7 @@ export default function PipelineScene({ dim = false }: { dim?: boolean }) {
 
   return (
     <group rotation={[0.06, 0, -0.06]}>
+      <AmbientField opacity={dim ? 0.5 : 0.8} radius={10} />
       {geos.map((g, k) => (
         <mesh key={k} geometry={g} material={mats[k]} />
       ))}
