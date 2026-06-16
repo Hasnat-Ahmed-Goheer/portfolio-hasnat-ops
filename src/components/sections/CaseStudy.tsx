@@ -97,8 +97,8 @@ export default function CaseStudy({ project }: { project: Project }) {
           <div className="max-w-3xl space-y-5">
             {project.architecture.map((a, i) => (
               <Reveal key={i} delay={i * 0.06}>
-                <div className="flex gap-4 border-l-2 border-accent/30 pl-5">
-                  <span className="shrink-0 font-mono text-xs text-muted">
+                <div className="flex items-baseline gap-4 border-l-2 border-accent/30 pl-5">
+                  <span className="shrink-0 font-mono text-sm text-muted">
                     [{String(i + 1).padStart(2, "0")}]
                   </span>
                   <p className="text-base leading-relaxed text-text/90">{a}</p>

@@ -126,15 +126,18 @@ body {
 }
 
 /* sparse hero sections let pointer events fall through to the 3D scene;
-   interactive children opt back in */
-.scene-passthrough {
-  pointer-events: none;
-}
-.scene-passthrough a,
-.scene-passthrough button,
-.scene-passthrough input,
-.scene-passthrough [data-interactive] {
-  pointer-events: auto;
+   interactive children opt back in. Only on fine-pointer (mouse) devices —
+   touch devices need pointer-events for native scroll gestures. */
+@media (pointer: fine) {
+  .scene-passthrough {
+    pointer-events: none;
+  }
+  .scene-passthrough a,
+  .scene-passthrough button,
+  .scene-passthrough input,
+  .scene-passthrough [data-interactive] {
+    pointer-events: auto;
+  }
 }
 
 /* 404 page: log lines type in one by one */
