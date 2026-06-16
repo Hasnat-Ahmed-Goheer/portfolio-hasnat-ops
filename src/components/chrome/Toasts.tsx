@@ -60,7 +60,7 @@ export default function Toasts() {
   return (
     <div
       aria-live="polite"
-      className="pointer-events-none fixed bottom-5 left-5 z-[60] flex flex-col gap-2"
+      className="pointer-events-none fixed bottom-5 left-5 z-[55] flex flex-col gap-2"
     >
       {toasts.map((t) => (
         <div

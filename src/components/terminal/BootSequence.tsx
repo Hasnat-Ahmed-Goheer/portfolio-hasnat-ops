@@ -28,6 +28,14 @@ export default function BootSequence() {
     if (seen) setBooted(true);
   }, [setBooted]);
 
+  /* drop the server-rendered first-paint shield once we've mounted: by now the
+     boot panel (new visitor) or the real content (returning) is committed
+     underneath, so removing the identical-dark shield reveals it seamlessly —
+     no bare-page flash before "init" */
+  useEffect(() => {
+    if (mounted) document.getElementById("boot-cover")?.remove();
+  }, [mounted, skipBoot]);
+
   /* reduced motion: never play */
   useEffect(() => {
     if (mounted && reducedMotion && !finished.current) {

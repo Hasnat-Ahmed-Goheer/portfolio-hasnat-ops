@@ -71,6 +71,17 @@ export default function RootLayout({
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(personJsonLd) }}
         />
+        {/* first-paint shield (see #boot-cover in globals.css): present in the
+            SSR HTML so frame 0 is dark, never the bare page */}
+        <div id="boot-cover" aria-hidden="true" />
+        {/* runs before paint: returning-in-session or reduced-motion visitors
+            skip the boot, so drop the shield immediately for instant content */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "try{if(sessionStorage.getItem('ops-booted')==='1'||matchMedia('(prefers-reduced-motion: reduce)').matches){var c=document.getElementById('boot-cover');if(c)c.remove();}}catch(e){}",
+          }}
+        />
         <LayoutShell>{children}</LayoutShell>
         <SpeedInsights />
       </body>

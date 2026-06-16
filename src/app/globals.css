@@ -102,6 +102,19 @@ body {
   animation: pulse-dot 2.4s ease-in-out infinite;
 }
 
+/* server-rendered first-paint shield. The boot screen (BootSequence) and the
+   canvas are client-only, so without this the very first painted frame is the
+   bare page — the homepage flashes before "hasnat.ops init" appears. This
+   opaque cover ships in the SSR HTML so frame 0 is already dark; an inline
+   script in <body> removes it pre-paint for returning/reduced-motion visitors,
+   and BootSequence removes it once it takes over. */
+#boot-cover {
+  position: fixed;
+  inset: 0;
+  z-index: 61;
+  background: var(--bg);
+}
+
 /* scene canvas layer — fixed behind the DOM */
 .scene-layer {
   position: fixed;
