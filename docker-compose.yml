@@ -6,7 +6,7 @@ services:
     image: hasnat-ops:latest
     container_name: hasnat-ops
     ports:
-      - "3000:3000"
+      - "5000:3000"
     environment:
       # Contact endpoint — see .env.example. Compose reads these from a local
       # .env file automatically; unset RESEND_API_KEY = log-only dev mode.
