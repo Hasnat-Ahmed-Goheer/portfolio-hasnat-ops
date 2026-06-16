@@ -6,13 +6,28 @@
  * or focusing a group excites its particles) → values.
  */
 import { useEffect, useRef } from "react";
+import Link from "next/link";
 import { gsap, useGSAP } from "@/lib/motion";
 import { lexicon } from "@/config/console";
 import { profile } from "@/content/profile";
 import { skillGroups } from "@/content/skills";
+import { experience } from "@/content/experience";
 import { useSceneStore } from "@/stores/sceneStore";
 import Reveal from "@/components/ui/Reveal";
 import DecodeText from "@/components/ui/DecodeText";
+
+/** scannable impact ledger — numbers a hiring manager skims (from the resume) */
+const METRICS = [
+  { value: "−60%", label: "auth code, after centralizing token validation" },
+  { value: "<200ms", label: "p95 latency at 99.9% uptime" },
+  { value: "15+", label: "cloud & on-prem environments self-served" },
+  { value: "10+", label: "production Helm charts authored" },
+];
+
+const STACK = [
+  "Kubernetes", "Helm", "Rancher", "Next.js",
+  "NestJS", "FastAPI", "Pinecone", "Stripe",
+];
 
 const VALUES = [
   {
@@ -76,6 +91,52 @@ export default function AboutSections() {
           <h1 className="max-w-3xl text-4xl font-medium leading-[1.06] tracking-tight sm:text-6xl">
             The engineer behind the console.
           </h1>
+        </div>
+      </section>
+
+      {/* beat 1.5 — at a glance: intro + impact ledger + now/stack (fills the
+          open space below the hero so the page opens with substance) */}
+      <section className="relative px-5 pb-12 pt-2" aria-label="At a glance">
+        <div className="mx-auto w-full max-w-6xl">
+          <Reveal>
+            <p className="max-w-2xl text-lg leading-relaxed text-text/80 sm:text-xl">
+              {profile.shortBio}
+            </p>
+          </Reveal>
+
+          <div className="mt-10 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {METRICS.map((m, i) => (
+              <Reveal key={m.value} delay={i * 0.06}>
+                <div className="h-full rounded-lg border hairline bg-elev/50 p-6">
+                  <p className="font-mono text-3xl font-medium text-accent">
+                    {m.value}
+                  </p>
+                  <p className="mt-2 text-sm leading-relaxed text-muted">
+                    {m.label}
+                  </p>
+                </div>
+              </Reveal>
+            ))}
+          </div>
+
+          <Reveal delay={0.1}>
+            <div className="mt-8 flex flex-col gap-4 font-mono text-xs sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-muted">
+                <span className="text-accent">now:</span> owning the full surface
+                at Stack8s
+              </p>
+              <ul className="flex flex-wrap gap-2">
+                {STACK.map((s) => (
+                  <li
+                    key={s}
+                    className="rounded border hairline px-2 py-1 text-text/70"
+                  >
+                    {s}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </Reveal>
         </div>
       </section>
 
@@ -161,6 +222,66 @@ export default function AboutSections() {
               </Reveal>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* beat 5 — recent eventlog snapshot (links into /experience) */}
+      <section className="relative border-t hairline px-5 py-24" aria-label="Recent experience">
+        <div className="mx-auto max-w-6xl">
+          <Reveal>
+            <div className="mb-8 flex items-baseline justify-between gap-4">
+              <p className="sys-label">recent eventlog</p>
+              <Link
+                href="/experience"
+                className="font-mono text-xs text-accent transition-opacity hover:opacity-70"
+              >
+                full eventlog →
+              </Link>
+            </div>
+          </Reveal>
+          <div className="border-t hairline">
+            {experience.slice(0, 4).map((e, i) => (
+              <Reveal key={e.company} delay={i * 0.05}>
+                <div className="flex flex-col gap-1 border-b hairline py-5 sm:flex-row sm:items-baseline sm:justify-between">
+                  <div>
+                    <p className="font-medium">{e.company}</p>
+                    <p className="text-sm text-muted">{e.role}</p>
+                  </div>
+                  <p className="shrink-0 font-mono text-xs text-muted">
+                    {e.start.slice(0, 4)} —{" "}
+                    {e.end === "present" ? "present" : e.end.slice(0, 4)}
+                  </p>
+                </div>
+              </Reveal>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* beat 6 — closing uplink CTA so the page ends deliberately */}
+      <section className="relative border-t hairline px-5 py-28" aria-label="Get in touch">
+        <div className="mx-auto max-w-6xl text-center">
+          <Reveal>
+            <p className="sys-label mb-4">
+              {lexicon.sectionPrefix}
+              {lexicon.sections.contact}
+            </p>
+            <h2 className="mx-auto max-w-2xl text-3xl font-medium tracking-tight sm:text-4xl">
+              Ready to deploy something together?
+            </h2>
+            <p className="mx-auto mt-4 max-w-xl text-muted">
+              {profile.availability === "open_to_work"
+                ? "Currently open to work — the fastest path is the uplink."
+                : "Always open to a good systems conversation."}
+            </p>
+            <Link
+              href="/contact"
+              data-cursor="open →"
+              className="mt-8 inline-flex items-center gap-2 rounded-lg border hairline bg-elev/60 px-6 py-3 font-mono text-sm text-accent transition-colors hover:border-accent/50"
+            >
+              open uplink →
+            </Link>
+          </Reveal>
         </div>
       </section>
     </>
