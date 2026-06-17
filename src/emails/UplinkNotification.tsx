@@ -15,10 +15,10 @@ import { emailColors as c, emailMono as mono, emailSans as sans } from "./theme"
 
 /**
  * Transactional email rendered by the /api/contact route and delivered via
- * Resend — the notification Hasnat receives when someone submits the uplink
- * form. Styled in the hasnat.ops console palette. A React Email template
- * (the idiomatic Resend way): render() turns this into HTML + a plain-text
- * fallback. All styling is inline (email clients strip <style>/external CSS).
+ * Gmail SMTP (Nodemailer) — the notification Hasnat receives when someone
+ * submits the uplink form. Styled in the hasnat.ops console palette. A React
+ * Email template: render() turns this into HTML + a plain-text fallback. All
+ * styling is inline (email clients strip <style>/external CSS).
  */
 export interface UplinkNotificationProps {
   name: string;

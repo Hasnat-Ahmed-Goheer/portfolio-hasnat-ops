@@ -21,9 +21,9 @@ import {
 
 /**
  * Auto-reply confirmation sent back to whoever submits the uplink form —
- * "message received, I'll be in touch". Rendered by /api/contact via Resend,
- * best-effort (a failure here never fails the request). Same console palette
- * as the notification so both emails read as one system.
+ * "message received, I'll be in touch". Rendered by /api/contact and sent via
+ * Gmail SMTP, best-effort (a failure here never fails the request). Same
+ * console palette as the notification so both emails read as one system.
  */
 export interface UplinkAckProps {
   name: string;

@@ -118,7 +118,8 @@ export async function POST(req: Request) {
     await mailer.sendMail({
       from: `"Hasnat Ahmed Goheer" <${account}>`,
       to: email,
-      replyTo: to,
+      /* reply to the public Gmail, never the private CONTACT_TO_EMAIL inbox */
+      replyTo: account,
       subject: "Message received — hasnat.ops",
       html: ackHtml,
       text: ackText,
