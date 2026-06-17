@@ -11,6 +11,7 @@ import {
   Section,
   Text,
 } from "@react-email/components";
+import { emailColors as c, emailMono as mono, emailSans as sans } from "./theme";
 
 /**
  * Transactional email rendered by the /api/contact route and delivered via
@@ -26,20 +27,6 @@ export interface UplinkNotificationProps {
   /** ISO timestamp the message was received */
   receivedAt?: string;
 }
-
-const c = {
-  bg: "#0a0e14",
-  elev: "#0e141d",
-  text: "#e6edf3",
-  muted: "#8b98a9",
-  line: "rgba(230,237,243,0.08)",
-  accent: "#22d3ee",
-  ok: "#34d399",
-};
-
-const mono =
-  'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace';
-const sans = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
 
 export default function UplinkNotification({
   name,

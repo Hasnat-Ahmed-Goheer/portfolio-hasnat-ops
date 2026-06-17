@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { render } from "@react-email/render";
 import UplinkNotification from "@/emails/UplinkNotification";
+import UplinkAck from "@/emails/UplinkAck";
 
 /**
  * Contact endpoint (Vercel serverless). Validates with zod, drops
@@ -101,5 +102,40 @@ export async function POST(req: Request) {
     console.error("[contact] resend error", res.status, await res.text());
     return NextResponse.json({ error: "delivery failed" }, { status: 502 });
   }
+
+  /* best-effort auto-reply to the sender — the notification above already
+     succeeded, so a failure here must not fail the request */
+  try {
+    const ackHtml = await render(UplinkAck({ name, message }));
+    const ackText = [
+      `Message received, ${name.split(" ")[0]} — thanks for reaching out through the console.`,
+      "",
+      "I read everything that comes through the uplink and typically reply within a day or two.",
+      "If it's time-sensitive, just respond to this email and it'll come straight to me.",
+      "",
+      "— Hasnat Ahmed Goheer · Full Stack Software Engineer",
+    ].join("\n");
+    const ack = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${key}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from: `Hasnat Ahmed Goheer <${from}>`,
+        to: [email],
+        reply_to: to,
+        subject: "Message received — hasnat.ops",
+        html: ackHtml,
+        text: ackText,
+      }),
+    });
+    if (!ack.ok) {
+      console.error("[contact] auto-reply failed", ack.status, await ack.text());
+    }
+  } catch (err) {
+    console.error("[contact] auto-reply threw", err);
+  }
+
   return NextResponse.json({ ok: true });
 }
