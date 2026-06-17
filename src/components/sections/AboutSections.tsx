@@ -15,7 +15,9 @@ import { experience } from "@/content/experience";
 import { themes } from "@/config/theme";
 import { useSceneStore } from "@/stores/sceneStore";
 import { useUiStore } from "@/stores/uiStore";
+import { useConsoleStore } from "@/stores/consoleStore";
 import { clusterAccent } from "@/lib/color";
+import { projectsForSkill } from "@/lib/skillMatch";
 import Reveal from "@/components/ui/Reveal";
 import DecodeText from "@/components/ui/DecodeText";
 
@@ -50,10 +52,17 @@ const VALUES = [
 export default function AboutSections() {
   const skillsRef = useRef<HTMLDivElement>(null);
   const progressRef = useRef<HTMLSpanElement>(null);
+  /* center-viewport live readouts, written from the scrub (no re-render) */
+  const morphBarRef = useRef<HTMLSpanElement>(null);
+  const scanBeamRef = useRef<HTMLSpanElement>(null);
   /* which cluster the scroll playhead is currently on; hover restores to it */
   const scanIdx = useRef(0);
   const hovering = useRef(false);
+  /* true only while the pinned set piece is on-screen — gates whether the 3D
+     field stays "queried" (a cluster tint) or relaxes back to the base hue */
+  const inView = useRef(false);
   const setActiveSkillGroup = useSceneStore((s) => s.setActiveSkillGroup);
+  const setSkillFilter = useConsoleStore((s) => s.setSkillFilter);
   /* re-renders only when the active cluster changes (~5×), never per-frame —
      the playhead writes via getState(), and progress goes through a ref */
   const activeId = useSceneStore((s) => s.activeSkillGroup);
@@ -75,7 +84,9 @@ export default function AboutSections() {
   };
   const release = () => {
     hovering.current = false;
-    setActiveSkillGroup(skillGroups[scanIdx.current].id);
+    /* restore to the scroll playhead's cluster — but only if the set piece is
+       still on-screen; off-screen it stays relaxed (no stuck tint) */
+    setActiveSkillGroup(inView.current ? skillGroups[scanIdx.current].id : "");
   };
 
   useEffect(
@@ -98,6 +109,22 @@ export default function AboutSections() {
         return;
 
       const n = skillGroups.length;
+      /* leaving the set piece (either edge) relaxes the field: clear the active
+         tint AND release the morph so the cloud loosens behind the rest of the
+         page — otherwise it stays frozen in cluster 5's colour (bad UX). */
+      const relax = () => {
+        inView.current = false;
+        const store = useSceneStore.getState();
+        store.setActiveSkillGroup("");
+        store.setProgress(0);
+      };
+      /* re-entering restores the cluster the playhead last rested on; onUpdate
+         takes over the morph from here */
+      const restore = () => {
+        inView.current = true;
+        if (!hovering.current)
+          useSceneStore.getState().setActiveSkillGroup(skillGroups[scanIdx.current].id);
+      };
       gsap.timeline({
         scrollTrigger: {
           trigger: el,
@@ -105,7 +132,12 @@ export default function AboutSections() {
           end: "+=200%",
           pin: true,
           scrub: 0.5,
+          onEnter: restore,
+          onEnterBack: restore,
+          onLeave: relax,
+          onLeaveBack: relax,
           onUpdate: (self) => {
+            inView.current = true;
             const store = useSceneStore.getState();
             store.setProgress(self.progress);
             const idx = Math.min(n - 1, Math.floor(self.progress * n));
@@ -113,11 +145,14 @@ export default function AboutSections() {
               scanIdx.current = idx;
               if (!hovering.current) store.setActiveSkillGroup(skillGroups[idx].id);
             }
+            const pct = Math.round(self.progress * 100);
             if (progressRef.current) {
-              progressRef.current.textContent = `scanning ${idx + 1}/${n} · morph ${Math.round(
-                self.progress * 100
-              )}%`;
+              progressRef.current.textContent = `scanning ${idx + 1}/${n} · morph ${pct}%`;
             }
+            /* live center-viewport instruments — ref writes, never re-render */
+            if (morphBarRef.current) morphBarRef.current.style.width = `${pct}%`;
+            if (scanBeamRef.current)
+              scanBeamRef.current.style.top = `${8 + self.progress * 84}%`;
           },
         },
       });
@@ -294,27 +329,77 @@ export default function AboutSections() {
               {/* center — framed console viewport: the live 3D cluster ring
                   shows through, bracketed so it reads as an intentional readout
                   rather than a blank gap. The big index tracks the active
-                  cluster, tying rail → viewport → 3D field together. */}
-              <div className="relative hidden md:block" aria-hidden="true">
-                <span className="pointer-events-none absolute left-0 top-0 h-5 w-5 border-l border-t border-accent/25" />
-                <span className="pointer-events-none absolute right-0 top-0 h-5 w-5 border-r border-t border-accent/25" />
-                <span className="pointer-events-none absolute bottom-0 left-0 h-5 w-5 border-b border-l border-accent/25" />
-                <span className="pointer-events-none absolute bottom-0 right-0 h-5 w-5 border-b border-r border-accent/25" />
-                <div className="flex h-full min-h-[340px] flex-col items-center justify-center gap-2">
-                  <span className="font-mono text-[0.6rem] uppercase tracking-[0.32em] text-muted/50">
-                    latent field
-                  </span>
-                  <span
-                    style={{ color: hueOf(currentIdx), opacity: 0.32 }}
-                    className="font-mono text-7xl font-medium tabular-nums transition-colors"
+                  cluster (glowing in its hue so it lifts off the field instead
+                  of dissolving into it), tying rail → viewport → 3D field. */}
+              {(() => {
+                const hue = hueOf(currentIdx);
+                return (
+                  <div
+                    className="relative hidden overflow-hidden md:block"
+                    aria-hidden="true"
+                    style={{ ["--hue" as string]: hue }}
                   >
-                    {String(currentIdx + 1).padStart(2, "0")}
-                  </span>
-                  <span className="font-mono text-[0.65rem] tracking-[0.2em] text-muted/40">
-                    / {String(skillGroups.length).padStart(2, "0")} clusters
-                  </span>
-                </div>
-              </div>
+                    {/* corner brackets pick up the active hue and pulse */}
+                    <span
+                      style={{ borderColor: hue }}
+                      className="status-dot pointer-events-none absolute left-0 top-0 h-5 w-5 border-l border-t"
+                    />
+                    <span
+                      style={{ borderColor: hue }}
+                      className="status-dot pointer-events-none absolute right-0 top-0 h-5 w-5 border-r border-t"
+                    />
+                    <span
+                      style={{ borderColor: hue }}
+                      className="status-dot pointer-events-none absolute bottom-0 left-0 h-5 w-5 border-b border-l"
+                    />
+                    <span
+                      style={{ borderColor: hue }}
+                      className="status-dot pointer-events-none absolute bottom-0 right-0 h-5 w-5 border-b border-r"
+                    />
+                    {/* scan beam: a faint hue line sweeping top→bottom as the
+                        morph advances (position written from the scrub) */}
+                    <span
+                      ref={scanBeamRef}
+                      style={{
+                        background: `linear-gradient(90deg, transparent, ${hue}, transparent)`,
+                        top: "8%",
+                      }}
+                      className="pointer-events-none absolute inset-x-6 h-px opacity-40"
+                    />
+                    <div className="flex h-full min-h-[340px] flex-col items-center justify-center gap-1.5">
+                      <span className="font-mono text-[0.6rem] uppercase tracking-[0.32em] text-muted/60">
+                        latent field · inspector
+                      </span>
+                      <span
+                        style={{
+                          color: hue,
+                          textShadow: `0 0 28px ${hue}, 0 0 64px ${hue}66`,
+                        }}
+                        className="font-mono text-8xl font-medium leading-none tabular-nums transition-colors duration-500"
+                      >
+                        {String(currentIdx + 1).padStart(2, "0")}
+                      </span>
+                      <span
+                        style={{ color: hue }}
+                        className="mt-1 font-mono text-xs uppercase tracking-[0.24em] transition-colors duration-500"
+                      >
+                        {activeGroup.label}
+                      </span>
+                      <span className="font-mono text-[0.65rem] tracking-[0.2em] text-muted/40">
+                        / {String(skillGroups.length).padStart(2, "0")} clusters
+                      </span>
+                      {/* morph progress bar — width written from the scrub */}
+                      <span className="mt-4 block h-px w-40 overflow-hidden bg-text/10">
+                        <span
+                          ref={morphBarRef}
+                          style={{ background: hue, width: "0%" }}
+                          className="block h-full transition-colors duration-500"
+                        />
+                      </span>
+                    </div>
+                  </div>
+                );
+              })()}
 
               {/* right — detail readout for the active cluster (fills the dead
                   column with real content; reads the store, never writes it) */}
@@ -351,6 +436,22 @@ export default function AboutSections() {
                     </span>
                   ))}
                 </div>
+                {/* link cluster → deployments: lock this skill as a /work filter */}
+                {(() => {
+                  const n = projectsForSkill(currentId).length;
+                  if (n === 0) return null;
+                  return (
+                    <Link
+                      href="/work"
+                      data-interactive
+                      onClick={() => setSkillFilter(currentId)}
+                      style={{ color: hueOf(currentIdx) }}
+                      className="mt-6 inline-flex items-center gap-1.5 font-mono text-xs transition-opacity hover:opacity-70"
+                    >
+                      inspect {n} deployment{n === 1 ? "" : "s"} using this stack →
+                    </Link>
+                  );
+                })()}
               </div>
             </div>
           </div>
