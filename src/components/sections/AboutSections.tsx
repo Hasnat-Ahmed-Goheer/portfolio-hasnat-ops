@@ -375,13 +375,13 @@ export default function AboutSections() {
                           color: hue,
                           textShadow: `0 0 28px ${hue}, 0 0 64px ${hue}66`,
                         }}
-                        className="font-mono text-8xl font-medium leading-none tabular-nums transition-colors duration-500"
+                        className="font-mono text-8xl font-medium leading-none tabular-nums transition-colors duration-500 motion-reduce:transition-none"
                       >
                         {String(currentIdx + 1).padStart(2, "0")}
                       </span>
                       <span
                         style={{ color: hue }}
-                        className="mt-1 font-mono text-xs uppercase tracking-[0.24em] transition-colors duration-500"
+                        className="mt-1 font-mono text-xs uppercase tracking-[0.24em] transition-colors duration-500 motion-reduce:transition-none"
                       >
                         {activeGroup.label}
                       </span>
@@ -393,7 +393,7 @@ export default function AboutSections() {
                         <span
                           ref={morphBarRef}
                           style={{ background: hue, width: "0%" }}
-                          className="block h-full transition-colors duration-500"
+                          className="block h-full transition-colors duration-500 motion-reduce:transition-none"
                         />
                       </span>
                     </div>
