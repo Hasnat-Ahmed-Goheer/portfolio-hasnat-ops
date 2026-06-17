@@ -167,7 +167,7 @@ export default function CanvasRoot() {
           {sceneNodeFor(shown)}
           <ReadySignal />
         </Suspense>
-        {gpuTier === "full" && !degraded && <Effects />}
+        {gpuTier === "full" && <Effects degraded={degraded} />}
       </Canvas>
     </div>
   );

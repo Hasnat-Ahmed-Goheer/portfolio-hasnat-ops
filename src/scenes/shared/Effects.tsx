@@ -4,8 +4,15 @@ import { EffectComposer, Bloom, Noise, Vignette } from "@react-three/postprocess
 import { fx } from "@/config/theme";
 import { useUiStore } from "@/stores/uiStore";
 
-/** Shared post pipeline — first knobs dropped under load (see PLAN §E). */
-export default function Effects() {
+/** Shared post pipeline — first knobs dropped under load (see PLAN §E).
+ *
+ * The whole composer stays mounted whenever the tier allows post; only the
+ * expensive bloom is dialled down under sustained low FPS (`degraded`). It is
+ * deliberately NOT torn down on `degraded`, because unmounting/remounting the
+ * composer made the film grain visibly pop in and out on the first-load FPS
+ * dip (grain shows → degrade fires → grain vanishes → recovers → grain back).
+ * The real perf lever under load is the DPR drop to 1, handled in CanvasRoot. */
+export default function Effects({ degraded = false }: { degraded?: boolean }) {
   /* Hold the film grain off until the scene is actually settled. The Noise
      pass is SCREEN-blended random static; over the dark, near-empty frames of
      a still-converging scene it reads as "the renders are loading" (TV snow).
@@ -18,7 +25,7 @@ export default function Effects() {
     <EffectComposer multisampling={0}>
       <Bloom
         mipmapBlur
-        intensity={fx.bloomIntensity}
+        intensity={degraded ? fx.bloomIntensity * 0.4 : fx.bloomIntensity}
         luminanceThreshold={fx.bloomThreshold}
       />
       <Noise opacity={sceneReady ? fx.grainOpacity : 0} />
