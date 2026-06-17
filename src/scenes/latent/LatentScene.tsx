@@ -9,7 +9,7 @@
 import * as THREE from "three";
 import { useEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
-import { sceneParams } from "@/config/console";
+import { sceneParams, SHOCK_DECAY } from "@/config/console";
 import { themes } from "@/config/theme";
 import { useSceneStore } from "@/stores/sceneStore";
 import { useUiStore } from "@/stores/uiStore";
@@ -231,7 +231,7 @@ export default function LatentScene({
       lastDisturb.current = store.disturb;
       shock.current = 1;
     }
-    shock.current *= Math.exp(-2 * Math.min(delta, 0.05));
+    shock.current *= Math.exp(-SHOCK_DECAY * Math.min(delta, 0.05));
     u.uShock.value = shock.current;
 
     const activeId = store.activeSkillGroup;

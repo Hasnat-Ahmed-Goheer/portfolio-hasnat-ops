@@ -17,6 +17,7 @@ import * as THREE from "three";
 import { useEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { themes } from "@/config/theme";
+import { SHOCK_DECAY } from "@/config/console";
 import { useUiStore } from "@/stores/uiStore";
 import { useSceneStore } from "@/stores/sceneStore";
 import { mulberry32 } from "./rng";
@@ -139,7 +140,7 @@ export default function AmbientField({
         shock.current = Math.max(shock.current, 0.8);
       }
     }
-    shock.current *= Math.exp(-2.2 * dt);
+    shock.current *= Math.exp(-SHOCK_DECAY * dt);
     u.uShock.value = shock.current;
   });
 

@@ -32,6 +32,12 @@ export const bootLines = [
 ];
 
 /** Per-scene tunables (counts auto-reduced on low-power devices). */
+/* Shared shockwave decay rate (per second, used as exp(-SHOCK_DECAY * dt)).
+   Every scene's terminal-egg / disturb ripple settles at the same cadence so
+   the whole console reacts as one system — previously each scene drifted
+   (2.0–2.4) and pulses felt subtly out of step between routes. */
+export const SHOCK_DECAY = 2.2;
+
 export const sceneParams = {
   /* seed / dimSeed: the dim "twin" routes (/contact, /experience) reseed their
      layout so they no longer overlay their parent scene pixel-for-pixel — a
@@ -46,6 +52,6 @@ export const sceneParams = {
     pingPeriod: 3.2, pingSpeed: 4.5, pingExtent: 12,
   },
   latent: { points: 36000, mobilePoints: 12000, clusters: 5 },
-  pipeline: { tubes: 5, packetsPerTube: 3, seed: 11, dimSeed: 23 },
+  pipeline: { tubes: 5, packetsPerTube: 5, seed: 11, dimSeed: 23 },
   deployment: { pods: 14, mobilePods: 8 },
 } as const;

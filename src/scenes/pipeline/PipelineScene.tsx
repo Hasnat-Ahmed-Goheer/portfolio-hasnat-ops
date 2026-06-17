@@ -9,7 +9,7 @@
 import * as THREE from "three";
 import { useEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
-import { sceneParams } from "@/config/console";
+import { sceneParams, SHOCK_DECAY } from "@/config/console";
 import { themes } from "@/config/theme";
 import { useSceneStore } from "@/stores/sceneStore";
 import { useUiStore } from "@/stores/uiStore";
@@ -115,7 +115,7 @@ export default function PipelineScene({ dim = false }: { dim?: boolean }) {
       lastDisturb.current = store.disturb;
       shock.current = 1;
     }
-    shock.current *= Math.exp(-2.2 * dt);
+    shock.current *= Math.exp(-SHOCK_DECAY * dt);
 
     /* /experience reads as a recorded log being replayed: a playhead sweeps a
        bright highlight down the streams (vs /work's hover-driven boost) */
@@ -177,8 +177,11 @@ export default function PipelineScene({ dim = false }: { dim?: boolean }) {
       ))}
       <instancedMesh ref={packetsRef} args={[undefined, undefined, TUBES * PACKETS]}>
         <sphereGeometry args={[1, 10, 10]} />
+        {/* amber payloads riding the cyan rails — same "data in motion" accent
+            (accent2) the cluster uses for its packets, so traffic reads alike
+            across scenes */}
         <meshBasicMaterial
-          color={colors.accent}
+          color={colors.accent2}
           toneMapped={false}
           transparent
           opacity={dim ? 0.5 : 1}

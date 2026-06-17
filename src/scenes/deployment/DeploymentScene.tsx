@@ -9,7 +9,7 @@ import * as THREE from "three";
 import { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
-import { sceneParams } from "@/config/console";
+import { sceneParams, SHOCK_DECAY } from "@/config/console";
 import { themes } from "@/config/theme";
 import { useSceneStore } from "@/stores/sceneStore";
 import { useUiStore } from "@/stores/uiStore";
@@ -68,7 +68,7 @@ export default function DeploymentScene() {
       lastDisturb.current = store.disturb;
       shock.current = 1;
     }
-    shock.current *= Math.exp(-2.4 * dt);
+    shock.current *= Math.exp(-SHOCK_DECAY * dt);
     const flare = 1 + shock.current * 0.55;
 
     for (let i = 0; i < count; i++) {
