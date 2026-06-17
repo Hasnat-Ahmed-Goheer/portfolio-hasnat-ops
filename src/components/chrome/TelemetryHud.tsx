@@ -3,18 +3,16 @@
 /**
  * Persistent corner telemetry — makes the whole site read as a running system.
  * Uptime, GPU fps (real frame meter), the active scene, and "pods online"
- * (kubectl-scale replicas) update through refs ~2×/s, never React state. Also
- * hosts the ambient-sound toggle. Decorative readouts are aria-hidden; the
- * sound button is a real labelled control. md+ only (mobile has the terminal
- * launcher in the opposite corner). Collapses to a single status dot.
+ * (kubectl-scale replicas) update through refs on a visibility-aware interval
+ * (paused while the tab is hidden, matching the canvas), never React state.
+ * Decorative readouts are aria-hidden; the collapse control is a real button.
+ * md+ only (mobile has the terminal launcher in the opposite corner).
  */
 import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { getFps } from "@/lib/perfMeter";
 import { useSceneStore } from "@/stores/sceneStore";
 import { useUiStore } from "@/stores/uiStore";
-import { useConsoleStore, readStoredSound } from "@/stores/consoleStore";
-import { setAudioEnabled } from "@/lib/audio";
 
 const SCENE_LABEL: Record<string, string> = {
   "/": "cluster.hive",
@@ -30,51 +28,67 @@ function sceneFor(path: string): string {
   return SCENE_LABEL[path] ?? "console.idle";
 }
 
+/** fps → health colour (truthful telemetry, not a static green dot) */
+function fpsColor(fps: number): string {
+  if (fps < 30) return "var(--danger)";
+  if (fps < 50) return "var(--accent2)";
+  return "var(--ok)";
+}
+
 export default function TelemetryHud() {
   const pathname = usePathname();
   const booted = useUiStore((s) => s.booted);
   const reducedMotion = useUiStore((s) => s.reducedMotion);
-  const soundEnabled = useConsoleStore((s) => s.soundEnabled);
-  const setSoundEnabled = useConsoleStore((s) => s.setSoundEnabled);
   const [collapsed, setCollapsed] = useState(false);
 
+  const dotRef = useRef<HTMLSpanElement>(null);
   const uptimeRef = useRef<HTMLSpanElement>(null);
   const fpsRef = useRef<HTMLSpanElement>(null);
   const podsRef = useRef<HTMLSpanElement>(null);
 
-  /* hydrate the persisted sound preference once, post-mount (avoids SSR) */
+  /* visibility-aware interval (not rAF): these are ~1 Hz text writes that
+     don't need frame alignment, and the loop must go quiet on a hidden tab
+     so a backgrounded page idles like the canvas does. Uptime is derived from
+     wall-clock so it stays accurate across pauses. */
   useEffect(() => {
-    const stored = readStoredSound();
-    if (stored) setSoundEnabled(true);
-  }, [setSoundEnabled]);
+    const start = Date.now();
+    let timer: ReturnType<typeof setInterval> | undefined;
+    const period = reducedMotion ? 2000 : 1000;
 
-  /* keep the audio engine in sync with the toggle */
-  useEffect(() => {
-    setAudioEnabled(soundEnabled);
-  }, [soundEnabled]);
-
-  /* ref-driven readouts — ~2×/s, no re-renders */
-  useEffect(() => {
-    const start = performance.now();
-    let last = 0;
-    let raf = 0;
-    const interval = reducedMotion ? 1000 : 500;
-    const tick = (now: number) => {
-      if (now - last >= interval) {
-        last = now;
-        const secs = Math.floor((now - start) / 1000);
-        const hh = String(Math.floor(secs / 3600)).padStart(2, "0");
-        const mm = String(Math.floor((secs % 3600) / 60)).padStart(2, "0");
-        const ss = String(secs % 60).padStart(2, "0");
-        if (uptimeRef.current) uptimeRef.current.textContent = `${hh}:${mm}:${ss}`;
-        if (fpsRef.current) fpsRef.current.textContent = `${getFps()}`;
-        if (podsRef.current)
-          podsRef.current.textContent = `${useSceneStore.getState().replicas}`;
-      }
-      raf = requestAnimationFrame(tick);
+    const tick = () => {
+      const secs = Math.floor((Date.now() - start) / 1000);
+      const hh = String(Math.floor(secs / 3600)).padStart(2, "0");
+      const mm = String(Math.floor((secs % 3600) / 60)).padStart(2, "0");
+      const ss = String(secs % 60).padStart(2, "0");
+      if (uptimeRef.current) uptimeRef.current.textContent = `${hh}:${mm}:${ss}`;
+      const fps = getFps();
+      if (fpsRef.current) fpsRef.current.textContent = `${fps}`;
+      if (dotRef.current) dotRef.current.style.backgroundColor = fpsColor(fps);
+      if (podsRef.current)
+        podsRef.current.textContent = `${useSceneStore.getState().replicas}`;
     };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
+
+    const startTimer = () => {
+      if (timer === undefined) {
+        tick();
+        timer = setInterval(tick, period);
+      }
+    };
+    const stopTimer = () => {
+      if (timer !== undefined) {
+        clearInterval(timer);
+        timer = undefined;
+      }
+    };
+    const onVisibility = () =>
+      document.visibilityState === "hidden" ? stopTimer() : startTimer();
+
+    startTimer();
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      stopTimer();
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
   }, [reducedMotion]);
 
   const scene = sceneFor(pathname);
@@ -86,14 +100,17 @@ export default function TelemetryHud() {
       }`}
     >
       <div className="flex items-stretch overflow-hidden rounded-md border hairline bg-elev/80 backdrop-blur">
-        {/* collapse toggle / live status dot */}
+        {/* collapse toggle; the dot is fps-colored live telemetry */}
         <button
           onClick={() => setCollapsed((c) => !c)}
           aria-label={collapsed ? "Show telemetry" : "Hide telemetry"}
           aria-expanded={!collapsed}
           className="flex items-center gap-2 px-2.5 py-2 text-muted transition-colors hover:text-text"
         >
-          <span className="status-dot inline-block h-1.5 w-1.5 rounded-full bg-ok" />
+          <span
+            ref={dotRef}
+            className="status-dot inline-block h-1.5 w-1.5 rounded-full bg-ok"
+          />
           {collapsed && <span className="text-muted/70">sys</span>}
         </button>
 
@@ -117,18 +134,6 @@ export default function TelemetryHud() {
             </span>
           </div>
         )}
-
-        {/* ambient sound toggle — a real control (not aria-hidden) */}
-        <button
-          onClick={() => setSoundEnabled(!soundEnabled)}
-          aria-label={soundEnabled ? "Mute ambient sound" : "Enable ambient sound"}
-          aria-pressed={soundEnabled}
-          className={`border-l hairline px-2.5 py-2 transition-colors hover:text-text ${
-            soundEnabled ? "text-accent" : "text-muted"
-          }`}
-        >
-          {soundEnabled ? "♪ on" : "♪ off"}
-        </button>
       </div>
     </div>
   );
