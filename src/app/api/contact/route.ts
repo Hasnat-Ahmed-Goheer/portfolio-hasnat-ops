@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { render } from "@react-email/render";
+import UplinkNotification from "@/emails/UplinkNotification";
 
 /**
  * Contact endpoint (Vercel serverless). Validates with zod, drops
@@ -62,6 +64,23 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true });
   }
 
+  /* rich HTML from the React Email template; a hand-written plain-text
+     fallback (cleaner than html-to-text, which duplicates mailto hrefs) */
+  const receivedAt = new Date();
+  const html = await render(
+    UplinkNotification({ name, email, message, receivedAt: receivedAt.toISOString() })
+  );
+  const text = [
+    "New message via the hasnat.ops uplink",
+    "",
+    `from:     ${name} <${email}>`,
+    `received: ${receivedAt.toUTCString()}`,
+    "",
+    message,
+    "",
+    `— reply directly to this email to reach ${name.split(" ")[0]}`,
+  ].join("\n");
+
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: {
@@ -73,7 +92,8 @@ export async function POST(req: Request) {
       to: [to],
       reply_to: email,
       subject: `[uplink] ${name}`,
-      text: `from: ${name} <${email}>\n\n${message}`,
+      html,
+      text,
     }),
   });
 

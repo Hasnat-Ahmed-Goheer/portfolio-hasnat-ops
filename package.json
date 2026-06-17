@@ -10,6 +10,8 @@
   },
   "dependencies": {
     "@gsap/react": "^2.1.2",
+    "@react-email/components": "^1.0.12",
+    "@react-email/render": "^2.0.9",
     "@react-three/drei": "^10.0.0",
     "@react-three/fiber": "^9.1.0",
     "@react-three/postprocessing": "^3.0.4",
