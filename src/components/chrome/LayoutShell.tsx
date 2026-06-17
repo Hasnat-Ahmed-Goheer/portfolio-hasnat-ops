@@ -13,12 +13,15 @@ import { gsap, ScrollTrigger } from "@/lib/motion";
 import { useCapabilities } from "@/lib/a11y";
 import { useUiStore } from "@/stores/uiStore";
 import { useTerminalStore } from "@/stores/terminalStore";
+import { useConsoleStore } from "@/stores/consoleStore";
 import Nav from "./Nav";
 import Footer from "./Footer";
 import Cursor from "./Cursor";
 import ScrollProgress from "./ScrollProgress";
 import HoverTip from "./HoverTip";
 import Toasts from "./Toasts";
+import TelemetryHud from "./TelemetryHud";
+import CommandPalette from "./CommandPalette";
 import BootSequence from "../terminal/BootSequence";
 import Terminal from "../terminal/Terminal";
 
@@ -40,14 +43,14 @@ export default function LayoutShell({ children }: { children: ReactNode }) {
     return () => gsap.ticker.remove(update);
   }, [reducedMotion]);
 
-  /* global terminal hotkeys: ⌘K / Ctrl+K toggles, ~ opens */
+  /* global console hotkeys: ⌘K / Ctrl+K → command palette; ~ / ` → power-shell */
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const el = e.target as HTMLElement | null;
       const typing = el?.closest("input, textarea, [contenteditable='true']");
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
-        setOpen(!useTerminalStore.getState().open);
+        useConsoleStore.getState().togglePalette();
       } else if ((e.key === "~" || e.key === "`") && !typing) {
         e.preventDefault();
         setOpen(true);
@@ -81,6 +84,8 @@ export default function LayoutShell({ children }: { children: ReactNode }) {
       <main id="main" className="relative z-10">{children}</main>
       <Footer />
       <Terminal mode="palette" />
+      <CommandPalette />
+      <TelemetryHud />
       <Toasts />
       <Cursor />
       {/* mobile terminal launcher (keybinds need a keyboard) */}

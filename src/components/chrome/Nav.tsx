@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { lexicon } from "@/config/console";
 import { profile } from "@/content/profile";
-import { useTerminalStore } from "@/stores/terminalStore";
+import { useConsoleStore } from "@/stores/consoleStore";
 import { useUiStore } from "@/stores/uiStore";
 
 const links = [
@@ -27,7 +27,7 @@ function prefetchScene(href: string) {
 
 export default function Nav() {
   const pathname = usePathname();
-  const setOpen = useTerminalStore((s) => s.setOpen);
+  const togglePalette = useConsoleStore((s) => s.togglePalette);
   const booted = useUiStore((s) => s.booted);
 
   return (
@@ -70,11 +70,11 @@ export default function Nav() {
             );
           })}
           <button
-            onClick={() => setOpen(true)}
+            onClick={togglePalette}
             className="ml-2 hidden items-center gap-1.5 rounded border hairline px-2.5 py-1.5 text-muted transition-colors hover:border-accent/40 hover:text-text md:flex"
-            aria-label="Open terminal (Cmd+K)"
+            aria-label="Open command palette (Cmd+K)"
           >
-            <span className="text-accent">⌘K</span> terminal
+            <span className="text-accent">⌘K</span> command
           </button>
         </div>
       </nav>

@@ -18,6 +18,7 @@ import { lexicon } from "@/config/console";
 import { useTerminalStore, type LineKind } from "@/stores/terminalStore";
 import { execute, complete, type CmdCtx } from "@/lib/commands";
 import { formatPath } from "@/lib/fakeFs";
+import { playKey, playNav } from "@/lib/audio";
 
 const kindClass: Record<LineKind, string> = {
   in: "text-text",
@@ -80,7 +81,10 @@ export default function Terminal({ mode }: { mode: "palette" | "inline" }) {
   }, []);
 
   const onKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    /* ambient feedback: a tick per character, a confirming note on submit */
+    if (e.key.length === 1) playKey();
     if (e.key === "Enter") {
+      playNav();
       execute(input, ctx);
       setInput("");
       setSuggestions([]);

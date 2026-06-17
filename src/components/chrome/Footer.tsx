@@ -9,7 +9,7 @@ export default function Footer() {
       <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-6 gap-y-2 px-5 py-8 font-mono text-xs text-muted">
         <span className="text-text/70">{lexicon.footerEnd}</span>
         <TelemetryStrip />
-        <span className="hidden sm:inline">try: ⌘K → `help`</span>
+        <span className="hidden sm:inline">⌘K to jump · ` for the shell</span>
         <div className="ml-auto flex gap-4">
           {profile.socials.map((s) => (
             <a

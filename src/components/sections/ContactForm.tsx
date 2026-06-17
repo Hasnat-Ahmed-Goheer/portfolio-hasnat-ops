@@ -132,7 +132,7 @@ export default function ContactForm() {
               <a href={profile.resumeUrl} className="block text-text/85 hover:text-accent">
                 resume.pdf ↓
               </a>
-              <p className="pt-4 text-muted">or: ⌘K → `contact`</p>
+              <p className="pt-4 text-muted">or: ⌘K → contact</p>
             </div>
           </Reveal>
         </div>

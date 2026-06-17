@@ -1,0 +1,304 @@
+"use client";
+
+/**
+ * ⌘K command palette — a list-based, arrow-navigable quick switcher (distinct
+ * from the typed power-shell on `~`/backtick). Fuzzy-filters a flat action set
+ * (routes, projects, themes, sound, resume, terminal) and runs the selected
+ * action. Fully keyboard-operable; reuses the router, theme, and sound engine.
+ */
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent,
+} from "react";
+import { useRouter } from "next/navigation";
+import { lexicon } from "@/config/console";
+import { profile } from "@/content/profile";
+import { projects } from "@/content/projects";
+import { themes } from "@/config/theme";
+import { useConsoleStore } from "@/stores/consoleStore";
+import { useTerminalStore } from "@/stores/terminalStore";
+import { useUiStore } from "@/stores/uiStore";
+import { playOpen, playMove, playNav } from "@/lib/audio";
+
+interface Action {
+  id: string;
+  label: string;
+  hint: string;
+  group: string;
+  keywords?: string;
+  run: () => void;
+}
+
+/** subsequence fuzzy match — returns a score (lower = better) or -1 if no match */
+function fuzzy(query: string, target: string): number {
+  if (!query) return 0;
+  const q = query.toLowerCase();
+  const t = target.toLowerCase();
+  let ti = 0;
+  let score = 0;
+  let prev = -1;
+  for (let qi = 0; qi < q.length; qi++) {
+    const ch = q[qi];
+    const found = t.indexOf(ch, ti);
+    if (found === -1) return -1;
+    /* contiguous matches score better than scattered ones */
+    score += prev === -1 ? found : found - prev - 1;
+    prev = found;
+    ti = found + 1;
+  }
+  return score;
+}
+
+export default function CommandPalette() {
+  const router = useRouter();
+  const open = useConsoleStore((s) => s.paletteOpen);
+  const setPaletteOpen = useConsoleStore((s) => s.setPaletteOpen);
+  const setSoundEnabled = useConsoleStore((s) => s.setSoundEnabled);
+  const soundEnabled = useConsoleStore((s) => s.soundEnabled);
+  const setTheme = useUiStore((s) => s.setTheme);
+  const theme = useUiStore((s) => s.theme);
+  const openTerminal = useTerminalStore((s) => s.setOpen);
+
+  const [query, setQuery] = useState("");
+  const [sel, setSel] = useState(0);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
+  const prevFocus = useRef<Element | null>(null);
+
+  const close = useCallback(() => setPaletteOpen(false), [setPaletteOpen]);
+
+  const actions = useMemo<Action[]>(() => {
+    const go = (path: string) => () => {
+      close();
+      router.push(path);
+      playNav();
+    };
+    const list: Action[] = [
+      { id: "go-home", label: "Home", hint: "/", group: "Navigate", keywords: "cluster index", run: go("/") },
+      { id: "go-about", label: "About", hint: "/about", group: "Navigate", keywords: "operator skills latent", run: go("/about") },
+      { id: "go-work", label: "Work", hint: "/work", group: "Navigate", keywords: "projects deployments registry", run: go("/work") },
+      { id: "go-exp", label: "Experience", hint: "/experience", group: "Navigate", keywords: "eventlog timeline", run: go("/experience") },
+      { id: "go-lab", label: "Lab", hint: "/lab", group: "Navigate", keywords: "experiments", run: go("/lab") },
+      { id: "go-contact", label: "Contact", hint: "/contact", group: "Navigate", keywords: "uplink email hire", run: go("/contact") },
+    ];
+    for (const p of projects) {
+      list.push({
+        id: `open-${p.slug}`,
+        label: p.title,
+        hint: "open",
+        group: "Deployments",
+        keywords: `${p.slug} ${p.stack.join(" ")}`,
+        run: go(`/work/${p.slug}`),
+      });
+    }
+    for (const name of Object.keys(themes)) {
+      list.push({
+        id: `theme-${name}`,
+        label: `Theme: ${name}`,
+        hint: theme === name ? "active" : "switch",
+        group: "Display",
+        keywords: "color palette appearance",
+        run: () => {
+          setTheme(name);
+          playNav();
+          close();
+        },
+      });
+    }
+    list.push({
+      id: "sound-toggle",
+      label: soundEnabled ? "Sound: turn off" : "Sound: turn on",
+      hint: soundEnabled ? "on" : "off",
+      group: "Display",
+      keywords: "audio mute ambient",
+      run: () => {
+        setSoundEnabled(!soundEnabled);
+        close();
+      },
+    });
+    list.push({
+      id: "open-terminal",
+      label: "Open terminal",
+      hint: "`",
+      group: "System",
+      keywords: "shell console command line",
+      run: () => {
+        close();
+        openTerminal(true);
+      },
+    });
+    list.push({
+      id: "resume",
+      label: "Download résumé",
+      hint: "pdf",
+      group: "System",
+      keywords: "cv hire pdf",
+      run: () => {
+        close();
+        window.open(profile.resumeUrl, "_blank", "noopener");
+        playNav();
+      },
+    });
+    return list;
+  }, [router, close, theme, setTheme, soundEnabled, setSoundEnabled, openTerminal]);
+
+  const results = useMemo(() => {
+    if (!query.trim()) return actions;
+    return actions
+      .map((a) => ({ a, s: fuzzy(query.trim(), `${a.label} ${a.keywords ?? ""}`) }))
+      .filter((r) => r.s >= 0)
+      .sort((x, y) => x.s - y.s)
+      .map((r) => r.a);
+  }, [actions, query]);
+
+  /* clamp selection when the result set shrinks */
+  useEffect(() => {
+    setSel((s) => Math.min(s, Math.max(0, results.length - 1)));
+  }, [results.length]);
+
+  /* open/close side effects: focus trap + restore, reset query, open cue */
+  useEffect(() => {
+    if (open) {
+      prevFocus.current = document.activeElement;
+      setQuery("");
+      setSel(0);
+      inputRef.current?.focus();
+      playOpen();
+    } else if (prevFocus.current instanceof HTMLElement) {
+      prevFocus.current.focus();
+    }
+  }, [open]);
+
+  /* keep the active option scrolled into view */
+  useEffect(() => {
+    const el = listRef.current?.querySelector('[aria-selected="true"]');
+    el?.scrollIntoView({ block: "nearest" });
+  }, [sel, results]);
+
+  const onKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setSel((s) => Math.min(results.length - 1, s + 1));
+      playMove();
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setSel((s) => Math.max(0, s - 1));
+      playMove();
+    } else if (e.key === "Enter") {
+      e.preventDefault();
+      results[sel]?.run();
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      close();
+    }
+  };
+
+  if (!open) return null;
+
+  /* group consecutive results under headers while keeping a flat index */
+  let flat = -1;
+  let lastGroup = "";
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-start justify-center px-4 pt-[12vh]">
+      <button
+        aria-label="Close command palette"
+        className="absolute inset-0 cursor-default bg-black/70"
+        onClick={close}
+        tabIndex={-1}
+      />
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Command palette"
+        className="relative flex w-full max-w-xl flex-col overflow-hidden rounded-lg border hairline bg-elev/95 font-mono shadow-2xl shadow-black/60 backdrop-blur"
+      >
+        <div className="flex items-center gap-2 border-b hairline px-4 py-3">
+          <span className="text-accent">⌘</span>
+          <input
+            ref={inputRef}
+            value={query}
+            onChange={(e) => {
+              setQuery(e.target.value);
+              setSel(0);
+            }}
+            onKeyDown={onKeyDown}
+            role="combobox"
+            aria-expanded="true"
+            aria-controls="cmdk-list"
+            aria-activedescendant={results[sel] ? `cmdk-${results[sel].id}` : undefined}
+            aria-label="Search commands"
+            className="flex-1 bg-transparent text-sm text-text outline-none placeholder:text-muted/50"
+            placeholder="jump to a page, project, or command…"
+            autoComplete="off"
+            autoCapitalize="off"
+            spellCheck={false}
+          />
+          <kbd className="hidden rounded border hairline px-1.5 py-0.5 text-[10px] text-muted sm:block">
+            esc
+          </kbd>
+        </div>
+
+        <div
+          ref={listRef}
+          id="cmdk-list"
+          role="listbox"
+          aria-label="Commands"
+          data-lenis-prevent
+          className="max-h-[52vh] overflow-y-auto overscroll-contain py-2"
+        >
+          {results.length === 0 && (
+            <p className="px-4 py-6 text-center text-xs text-muted">
+              no matches for &ldquo;{query}&rdquo;
+            </p>
+          )}
+          {results.map((a) => {
+            flat++;
+            const header = a.group !== lastGroup ? a.group : null;
+            lastGroup = a.group;
+            const active = flat === sel;
+            const idx = flat;
+            return (
+              <div key={a.id}>
+                {header && (
+                  <p className="px-4 pb-1 pt-3 text-[10px] uppercase tracking-[0.2em] text-muted/60">
+                    {header}
+                  </p>
+                )}
+                <button
+                  id={`cmdk-${a.id}`}
+                  role="option"
+                  aria-selected={active}
+                  onMouseMove={() => setSel(idx)}
+                  onClick={() => a.run()}
+                  className={`flex w-full items-center gap-3 px-4 py-2 text-left text-sm transition-colors ${
+                    active ? "bg-accent/10 text-text" : "text-text/80"
+                  }`}
+                >
+                  <span
+                    className={`h-1 w-1 shrink-0 rounded-full ${
+                      active ? "bg-accent" : "bg-transparent"
+                    }`}
+                  />
+                  <span className="min-w-0 flex-1 truncate">{a.label}</span>
+                  <span className="shrink-0 text-[10px] text-muted">{a.hint}</span>
+                </button>
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="flex items-center gap-4 border-t hairline px-4 py-2 text-[10px] text-muted">
+          <span>↑↓ move</span>
+          <span>↵ select</span>
+          <span>esc close</span>
+          <span className="ml-auto hidden sm:inline">{lexicon.systemName}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
