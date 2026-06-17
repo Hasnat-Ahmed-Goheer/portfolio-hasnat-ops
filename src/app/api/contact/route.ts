@@ -3,11 +3,16 @@ import { z } from "zod";
 import { render } from "@react-email/render";
 import UplinkNotification from "@/emails/UplinkNotification";
 import UplinkAck from "@/emails/UplinkAck";
+import { getMailer, mailerUser } from "@/lib/mailer";
+
+/* Nodemailer opens a real SMTP socket — needs the Node.js runtime, not Edge */
+export const runtime = "nodejs";
 
 /**
- * Contact endpoint (Vercel serverless). Validates with zod, drops
- * honeypot hits silently, rate-limits per IP, and delivers via Resend
- * when RESEND_API_KEY is set (logs to console otherwise — dev mode).
+ * Contact endpoint (Vercel serverless). Validates with zod, drops honeypot
+ * hits silently, rate-limits per IP, and delivers through Gmail SMTP
+ * (Nodemailer) when GMAIL_USER + GMAIL_APP_PASSWORD are set — sending *as*
+ * the Gmail account itself. Logs to console otherwise (dev mode).
  */
 const schema = z.object({
   name: z.string().trim().min(1).max(120),
@@ -52,12 +57,12 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "rate limited — try later" }, { status: 429 });
   }
 
-  const key = process.env.RESEND_API_KEY;
-  const to = process.env.CONTACT_TO_EMAIL ?? "ch.hsyahmedgoheer@gmail.com";
-  const from = process.env.CONTACT_FROM_EMAIL ?? "onboarding@resend.dev";
+  const mailer = getMailer();
+  const account = mailerUser();
+  const to = process.env.CONTACT_TO_EMAIL ?? account;
 
-  if (!key) {
-    console.log("[contact] (dev — set RESEND_API_KEY to deliver)", {
+  if (!mailer || !account || !to) {
+    console.log("[contact] (dev — set GMAIL_USER + GMAIL_APP_PASSWORD to deliver)", {
       name,
       email,
       message,
@@ -82,28 +87,23 @@ export async function POST(req: Request) {
     `— reply directly to this email to reach ${name.split(" ")[0]}`,
   ].join("\n");
 
-  const res = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${key}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      from: `hasnat.ops uplink <${from}>`,
-      to: [to],
-      reply_to: email,
+  /* notification to Hasnat — this gates the response. replyTo is the sender,
+     so hitting reply in Gmail answers them directly. */
+  try {
+    await mailer.sendMail({
+      from: `"hasnat.ops uplink" <${account}>`,
+      to,
+      replyTo: `"${name}" <${email}>`,
       subject: `[uplink] ${name}`,
       html,
       text,
-    }),
-  });
-
-  if (!res.ok) {
-    console.error("[contact] resend error", res.status, await res.text());
+    });
+  } catch (err) {
+    console.error("[contact] gmail send failed", err);
     return NextResponse.json({ error: "delivery failed" }, { status: 502 });
   }
 
-  /* best-effort auto-reply to the sender — the notification above already
+  /* best-effort auto-reply to the sender — the notification already
      succeeded, so a failure here must not fail the request */
   try {
     const ackHtml = await render(UplinkAck({ name, message }));
@@ -115,26 +115,16 @@ export async function POST(req: Request) {
       "",
       "— Hasnat Ahmed Goheer · Full Stack Software Engineer",
     ].join("\n");
-    const ack = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${key}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        from: `Hasnat Ahmed Goheer <${from}>`,
-        to: [email],
-        reply_to: to,
-        subject: "Message received — hasnat.ops",
-        html: ackHtml,
-        text: ackText,
-      }),
+    await mailer.sendMail({
+      from: `"Hasnat Ahmed Goheer" <${account}>`,
+      to: email,
+      replyTo: to,
+      subject: "Message received — hasnat.ops",
+      html: ackHtml,
+      text: ackText,
     });
-    if (!ack.ok) {
-      console.error("[contact] auto-reply failed", ack.status, await ack.text());
-    }
   } catch (err) {
-    console.error("[contact] auto-reply threw", err);
+    console.error("[contact] auto-reply failed", err);
   }
 
   return NextResponse.json({ ok: true });
