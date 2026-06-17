@@ -46,7 +46,7 @@ export interface ExperienceEntry {
 export type MotifKey = "orbit" | "helix" | "pulse" | "rail" | "grid";
 
 export interface MediaItem {
-  /** path under /public, e.g. "/media/placeholder-dashboard.svg" */
+  /** path under /public, e.g. "/media/stack8s-console.jpg" */
   src: string;
   alt: string;
   /** console-window title bar text, e.g. "console — workloads.tsx" */

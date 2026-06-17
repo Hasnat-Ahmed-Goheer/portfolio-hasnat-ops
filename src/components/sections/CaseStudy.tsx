@@ -128,15 +128,16 @@ export default function CaseStudy({ project }: { project: Project }) {
                       </span>
                       <span className="truncate">{m.caption}</span>
                     </figcaption>
-                    {/* plain <img>: local SVG placeholders; swap to real
-                        captures (and next/image if raster) via /content */}
+                    {/* real product captures at varied native ratios — pin a
+                        uniform 16:10 window and cover-crop so the grid stays
+                        tidy and nothing distorts */}
                     <img
                       src={m.src}
                       alt={m.alt}
                       width={1280}
                       height={800}
                       loading="lazy"
-                      className="block w-full transition-transform duration-500 ease-out group-hover:scale-[1.02]"
+                      className="block aspect-[16/10] w-full object-cover object-top transition-transform duration-500 ease-out group-hover:scale-[1.02]"
                     />
                   </figure>
                 </Reveal>
