@@ -50,9 +50,12 @@ export default function LayoutShell({ children }: { children: ReactNode }) {
       const typing = el?.closest("input, textarea, [contenteditable='true']");
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
+        /* palette and shell are mutually exclusive — never stack two modals */
+        useTerminalStore.getState().setOpen(false);
         useConsoleStore.getState().togglePalette();
       } else if ((e.key === "~" || e.key === "`") && !typing) {
         e.preventDefault();
+        useConsoleStore.getState().setPaletteOpen(false);
         setOpen(true);
       }
     };

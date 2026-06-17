@@ -3,8 +3,9 @@
 /**
  * ⌘K command palette — a list-based, arrow-navigable quick switcher (distinct
  * from the typed power-shell on `~`/backtick). Fuzzy-filters a flat action set
- * (routes, projects, themes, sound, resume, terminal) and runs the selected
- * action. Fully keyboard-operable; reuses the router, theme, and sound engine.
+ * (routes, projects, themes, résumé, terminal) and runs the selected action.
+ * Fully keyboard-operable; reuses the router and theme engine, traps focus
+ * while open, and restores it to the trigger on close.
  */
 import {
   useCallback,
@@ -22,7 +23,7 @@ import { themes } from "@/config/theme";
 import { useConsoleStore } from "@/stores/consoleStore";
 import { useTerminalStore } from "@/stores/terminalStore";
 import { useUiStore } from "@/stores/uiStore";
-import { playOpen, playMove, playNav } from "@/lib/audio";
+import { trapTab } from "@/lib/focusTrap";
 
 interface Action {
   id: string;
@@ -57,8 +58,6 @@ export default function CommandPalette() {
   const router = useRouter();
   const open = useConsoleStore((s) => s.paletteOpen);
   const setPaletteOpen = useConsoleStore((s) => s.setPaletteOpen);
-  const setSoundEnabled = useConsoleStore((s) => s.setSoundEnabled);
-  const soundEnabled = useConsoleStore((s) => s.soundEnabled);
   const setTheme = useUiStore((s) => s.setTheme);
   const theme = useUiStore((s) => s.theme);
   const openTerminal = useTerminalStore((s) => s.setOpen);
@@ -67,6 +66,7 @@ export default function CommandPalette() {
   const [sel, setSel] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
   const prevFocus = useRef<Element | null>(null);
 
   const close = useCallback(() => setPaletteOpen(false), [setPaletteOpen]);
@@ -75,7 +75,6 @@ export default function CommandPalette() {
     const go = (path: string) => () => {
       close();
       router.push(path);
-      playNav();
     };
     const list: Action[] = [
       { id: "go-home", label: "Home", hint: "/", group: "Navigate", keywords: "cluster index", run: go("/") },
@@ -104,22 +103,10 @@ export default function CommandPalette() {
         keywords: "color palette appearance",
         run: () => {
           setTheme(name);
-          playNav();
           close();
         },
       });
     }
-    list.push({
-      id: "sound-toggle",
-      label: soundEnabled ? "Sound: turn off" : "Sound: turn on",
-      hint: soundEnabled ? "on" : "off",
-      group: "Display",
-      keywords: "audio mute ambient",
-      run: () => {
-        setSoundEnabled(!soundEnabled);
-        close();
-      },
-    });
     list.push({
       id: "open-terminal",
       label: "Open terminal",
@@ -140,11 +127,10 @@ export default function CommandPalette() {
       run: () => {
         close();
         window.open(profile.resumeUrl, "_blank", "noopener");
-        playNav();
       },
     });
     return list;
-  }, [router, close, theme, setTheme, soundEnabled, setSoundEnabled, openTerminal]);
+  }, [router, close, theme, setTheme, openTerminal]);
 
   const results = useMemo(() => {
     if (!query.trim()) return actions;
@@ -160,15 +146,20 @@ export default function CommandPalette() {
     setSel((s) => Math.min(s, Math.max(0, results.length - 1)));
   }, [results.length]);
 
-  /* open/close side effects: focus trap + restore, reset query, open cue */
+  /* open/close side effects: stash the trigger, reset query, focus the input;
+     on close restore focus to the trigger — but ONLY if focus was orphaned to
+     <body>. An action that hands off to another surface (e.g. "Open terminal"
+     focuses the terminal input) must keep that focus, so we never yank it back. */
   useEffect(() => {
     if (open) {
       prevFocus.current = document.activeElement;
       setQuery("");
       setSel(0);
       inputRef.current?.focus();
-      playOpen();
-    } else if (prevFocus.current instanceof HTMLElement) {
+    } else if (
+      prevFocus.current instanceof HTMLElement &&
+      (document.activeElement === document.body || document.activeElement === null)
+    ) {
       prevFocus.current.focus();
     }
   }, [open]);
@@ -183,11 +174,9 @@ export default function CommandPalette() {
     if (e.key === "ArrowDown") {
       e.preventDefault();
       setSel((s) => Math.min(results.length - 1, s + 1));
-      playMove();
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
       setSel((s) => Math.max(0, s - 1));
-      playMove();
     } else if (e.key === "Enter") {
       e.preventDefault();
       results[sel]?.run();
@@ -207,14 +196,16 @@ export default function CommandPalette() {
     <div className="fixed inset-0 z-50 flex items-start justify-center px-4 pt-[12vh]">
       <button
         aria-label="Close command palette"
-        className="absolute inset-0 cursor-default bg-black/70"
+        className="absolute inset-0 cursor-default bg-bg/70 backdrop-blur-sm"
         onClick={close}
         tabIndex={-1}
       />
       <div
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-label="Command palette"
+        onKeyDown={(e) => trapTab(e, dialogRef.current)}
         className="relative flex w-full max-w-xl flex-col overflow-hidden rounded-lg border hairline bg-elev/95 font-mono shadow-2xl shadow-black/60 backdrop-blur"
       >
         <div className="flex items-center gap-2 border-b hairline px-4 py-3">
@@ -228,7 +219,7 @@ export default function CommandPalette() {
             }}
             onKeyDown={onKeyDown}
             role="combobox"
-            aria-expanded="true"
+            aria-expanded={results.length > 0}
             aria-controls="cmdk-list"
             aria-activedescendant={results[sel] ? `cmdk-${results[sel].id}` : undefined}
             aria-label="Search commands"

@@ -18,7 +18,7 @@ import { lexicon } from "@/config/console";
 import { useTerminalStore, type LineKind } from "@/stores/terminalStore";
 import { execute, complete, type CmdCtx } from "@/lib/commands";
 import { formatPath } from "@/lib/fakeFs";
-import { playKey, playNav } from "@/lib/audio";
+import { trapTab } from "@/lib/focusTrap";
 
 const kindClass: Record<LineKind, string> = {
   in: "text-text",
@@ -41,6 +41,7 @@ export default function Terminal({ mode }: { mode: "palette" | "inline" }) {
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
   const prevFocus = useRef<Element | null>(null);
 
   const isPalette = mode === "palette";
@@ -81,10 +82,7 @@ export default function Terminal({ mode }: { mode: "palette" | "inline" }) {
   }, []);
 
   const onKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
-    /* ambient feedback: a tick per character, a confirming note on submit */
-    if (e.key.length === 1) playKey();
     if (e.key === "Enter") {
-      playNav();
       execute(input, ctx);
       setInput("");
       setSuggestions([]);
@@ -123,11 +121,15 @@ export default function Terminal({ mode }: { mode: "palette" | "inline" }) {
 
   const panel = (
     <div
+      ref={panelRef}
       role={isPalette ? "dialog" : "group"}
       aria-modal={isPalette || undefined}
       aria-label="Command terminal"
       className="flex w-full max-w-2xl flex-col overflow-hidden rounded-lg border hairline bg-elev/95 font-mono text-[13px] shadow-2xl shadow-black/60"
-      onKeyDown={(e) => e.key === "Escape" && isPalette && setOpen(false)}
+      onKeyDown={(e) => {
+        if (e.key === "Escape" && isPalette) setOpen(false);
+        else if (isPalette) trapTab(e, panelRef.current);
+      }}
     >
       <div className="flex items-center gap-2 border-b hairline px-4 py-2 text-xs text-muted">
         <span className="status-dot inline-block h-2 w-2 rounded-full bg-ok" />
