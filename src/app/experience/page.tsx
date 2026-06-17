@@ -3,6 +3,7 @@ import ExperienceTimeline from "@/components/sections/ExperienceTimeline";
 
 export const metadata: Metadata = {
   title: "Experience",
+  alternates: { canonical: "/experience" },
   description:
     "Career event log — six roles across every layer of the stack, 2023 to present.",
 };

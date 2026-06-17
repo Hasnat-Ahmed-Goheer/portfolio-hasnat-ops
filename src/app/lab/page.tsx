@@ -3,6 +3,7 @@ import LabSections from "@/components/sections/LabSections";
 
 export const metadata: Metadata = {
   title: "Lab",
+  alternates: { canonical: "/lab" },
   description:
     "The sandbox — experiments, shader sketches, and a terminal with secrets.",
 };

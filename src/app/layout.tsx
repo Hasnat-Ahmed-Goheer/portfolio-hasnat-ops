@@ -16,6 +16,7 @@ export const metadata: Metadata = {
     template: `%s — ${lexicon.systemName}`,
   },
   description: profile.shortBio,
+  alternates: { canonical: "/" },
   keywords: [
     "Full Stack Engineer",
     "Kubernetes",
