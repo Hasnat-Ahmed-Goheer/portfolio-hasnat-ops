@@ -52,24 +52,47 @@ const SUBSYSTEMS = [
 
 function Counter({ value, prefix = "", suffix = "" }: { value: number; prefix?: string; suffix?: string }) {
   const ref = useRef<HTMLSpanElement>(null);
-  useGSAP(() => {
+  /* Count-up is driven by IntersectionObserver, NOT ScrollTrigger: this
+     section sits below a pinned scrub whose pin-spacer shifts its real Y by
+     220vh, and a ScrollTrigger start computed against stale layout could be
+     missed on refresh — leaving the span stuck at its literal "0+" initial
+     text (a credibility-killer right under "years in production"). The IO
+     fires on actual intersection regardless of layout math, and a final
+     settle always lands the true value even if the tween is interrupted. */
+  useEffect(() => {
     const el = ref.current;
     if (!el) return;
+    const final = `${prefix}${value}${suffix}`;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      el.textContent = `${prefix}${value}${suffix}`;
+      el.textContent = final;
       return;
     }
-    const obj = { v: 0 };
-    gsap.to(obj, {
-      v: value,
-      duration: 1.6,
-      ease: "power2.out",
-      scrollTrigger: { trigger: el, start: "top 88%", once: true },
-      onUpdate: () => {
-        el.textContent = `${prefix}${Math.round(obj.v)}${suffix}`;
+    let tween: gsap.core.Tween | null = null;
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (!entries[0]?.isIntersecting) return;
+        io.disconnect();
+        const obj = { v: 0 };
+        tween = gsap.to(obj, {
+          v: value,
+          duration: 1.6,
+          ease: "power2.out",
+          onUpdate: () => {
+            el.textContent = `${prefix}${Math.round(obj.v)}${suffix}`;
+          },
+          onComplete: () => {
+            el.textContent = final;
+          },
+        });
       },
-    });
-  }, []);
+      { threshold: 0.4 }
+    );
+    io.observe(el);
+    return () => {
+      io.disconnect();
+      tween?.kill();
+    };
+  }, [value, prefix, suffix]);
   return <span ref={ref}>{`${prefix}0${suffix}`}</span>;
 }
 
