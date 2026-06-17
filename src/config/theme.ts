@@ -39,6 +39,6 @@ export const DEFAULT_THEME: ThemeName = "ops";
 export const fx = {
   bloomIntensity: 0.9,
   bloomThreshold: 0.18,
-  grainOpacity: 0.06,
+  grainOpacity: 0.085,
   vignetteDarkness: 0.55,
 };
