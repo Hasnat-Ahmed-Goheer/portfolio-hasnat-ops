@@ -14,7 +14,6 @@ import { useTerminalStore, type LineKind } from "@/stores/terminalStore";
 import { useSceneStore } from "@/stores/sceneStore";
 import { useUiStore } from "@/stores/uiStore";
 import { getFps, getWorstFps, resetWorst } from "@/lib/perfMeter";
-import { playPing } from "@/lib/audio";
 import {
   resolvePath,
   getNode,
@@ -378,7 +377,6 @@ export const commands: Record<string, Command> = {
     hidden: true,
     run: (args, push) => {
       useTerminalStore.getState().unlock("ping");
-      playPing();
       const host = args[0] || "localhost";
       push(`PING ${host} 56 bytes of data.`);
       push(`64 bytes from ${host}: icmp_seq=1 ttl=42 time=0.2 ms`, "ok");
