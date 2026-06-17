@@ -20,17 +20,20 @@ function FrameMeter() {
   return null;
 }
 
-/** Signals first-load readiness once the active scene has actually rendered
-    a few frames (lazy chunk resolved + shaders compiled + first paint). Lives
-    INSIDE the scene's Suspense boundary so it can't fire on the bare canvas.
-    One-time write to uiStore (not sceneStore) — never a per-frame target. */
+/** Signals first-load readiness once the active scene has rendered for a beat
+    — long enough for shaders to compile, springs/bloom to converge, and the
+    field to look settled (NOT just "a frame painted", which left the boot
+    panel lifting onto a dark, grainy, still-converging canvas). Accumulates
+    clamped delta so it's wall-clock based, not frame-count based, regardless
+    of the lazy-chunk load gap. Lives INSIDE the scene's Suspense boundary so
+    it can't fire on the bare canvas. One-time write to uiStore. */
 function ReadySignal() {
-  const frames = useRef(0);
+  const elapsed = useRef(0);
   const done = useRef(false);
-  useFrame(() => {
+  useFrame((_, delta) => {
     if (done.current) return;
-    frames.current += 1;
-    if (frames.current >= 3) {
+    elapsed.current += Math.min(delta, 0.05);
+    if (elapsed.current >= 0.4) {
       done.current = true;
       useUiStore.getState().setSceneReady(true);
     }
