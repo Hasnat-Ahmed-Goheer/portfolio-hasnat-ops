@@ -76,7 +76,7 @@ export default function ClusterScene({ dim = false }: { dim?: boolean }) {
   const prevDrag = useMemo(() => new THREE.Vector3(), []);
   const dragging = useRef(false);
 
-  const { bases, phases, sizes, links, neighbors, lattice } = useMemo(() => {
+  const { bases, phases, sizes, links, neighbors } = useMemo(() => {
     /* dim twin (/contact) reseeds so its hive doesn't overlay the home scene */
     const rng = mulberry32(
       dim ? sceneParams.cluster.dimSeed : sceneParams.cluster.seed
@@ -110,31 +110,12 @@ export default function ClusterScene({ dim = false }: { dim?: boolean }) {
         }
       }
     }
-    /* lattice targets for the assembly phase — a centered grid the hive snaps
-       into, cols/rows auto-derived from the (tier-dependent) node count so it
-       fills the dived camera's view at either density. Rows fold into a few
-       z-bands (latticeDepth) so the assembled form reads as a layered stack. */
-    const { latticeSpacingX, latticeSpacingY, latticeDepth } =
-      sceneParams.cluster;
-    const cols = Math.ceil(Math.sqrt(count * 1.7));
-    const rows = Math.ceil(count / cols);
-    const lattice = new Float32Array(count * 3);
-    for (let i = 0; i < count; i++) {
-      const col = i % cols;
-      const row = Math.floor(i / cols);
-      lattice[i * 3] = (col - (cols - 1) / 2) * latticeSpacingX;
-      lattice[i * 3 + 1] = ((rows - 1) / 2 - row) * latticeSpacingY;
-      lattice[i * 3 + 2] = ((row % 3) - 1) * latticeDepth;
-    }
-    return { bases, phases, sizes, links, neighbors, lattice };
+    return { bases, phases, sizes, links, neighbors };
   }, [count, dim]);
 
   /* mutable physics state */
   const off = useMemo(() => new Float32Array(count * 3), [count]);
   const vel = useMemo(() => new Float32Array(count * 3), [count]);
-  /* final rendered node positions (after vortex), so the link loop can read the
-     same points the nodes drew at and stay attached through the scroll dive */
-  const pos = useMemo(() => new Float32Array(count * 3), [count]);
   const hoverScale = useMemo(() => new Float32Array(count).fill(1), [count]);
   /* per-node visibility scale (0..1) — kubectl scale/delete spawn & evict */
   const life = useMemo(() => new Float32Array(count).fill(1), [count]);
@@ -308,14 +289,6 @@ export default function ClusterScene({ dim = false }: { dim?: boolean }) {
        hardest — done once per frame here, reused in the node loop below. */
     const { magnetRadius, magnetPull, leadPull, gatherMax } =
       sceneParams.cluster;
-    const { vortexSwirl, vortexFunnel, tubeRadius, vortexDepth, diveDepth } =
-      sceneParams.cluster;
-    /* scroll progress drives the two-phase set piece: 0→0.5 vortex (swirl +
-       funnel into a tube), 0.5→1 assembly (flow out into the ordered lattice).
-       `half` saturates the vortex by mid-scroll; `asm` ramps the lattice in. */
-    const vP = store.progress;
-    const half = Math.min(vP, 0.5) * 2;
-    const asm = Math.max(0, (vP - 0.5) * 2);
     const magnetGain =
       performance.now() < magnetExpiry.current ? 1 - store.progress : 0;
     if (magnetGain > 0) {
@@ -432,42 +405,9 @@ export default function ClusterScene({ dim = false }: { dim?: boolean }) {
         off[i3 + 1] = THREE.MathUtils.clamp(off[i3 + 1], -gatherMax, gatherMax);
       }
       const idle = Math.sin(t * 0.5 + phases[i]) * 0.1;
-      let x = bases[i].x + off[i3];
-      let y = bases[i].y + idle + off[i3 + 1];
-      let z = bases[i].z + off[i3 + 2];
-
-      /* two-phase scroll set piece. Non-destructive — it transforms only the
-         render position, never off/vel, so scrolling back up reassembles the
-         exact hive. Skips the dragged node so a grab stays predictable. */
-      if (vP > 0.001 && i !== dragId.current) {
-        /* phase 1 — vortex: swirl around the view axis + funnel toward the
-           tube wall, intensity = half (saturates by mid-scroll) */
-        const ang = half * vortexSwirl + t * 0.25 * half;
-        const cos = Math.cos(ang);
-        const sin = Math.sin(ang);
-        const rx = x * cos - y * sin;
-        const ry = x * sin + y * cos;
-        const rad = Math.hypot(rx, ry) || 1e-4;
-        const k = 1 - (1 - tubeRadius / rad) * half * vortexFunnel;
-        let vx = rx * k;
-        let vy = ry * k;
-        let vz = z + half * vortexDepth * Math.sin(phases[i]);
-        /* phase 2 — assembly: ease the swirled point into its ordered lattice
-           slot as asm ramps 0→1 over the back half (smoothstep) — the spiral
-           resolves into architecture */
-        if (asm > 0) {
-          const e = asm * asm * (3 - 2 * asm);
-          vx += (lattice[i3] - vx) * e;
-          vy += (lattice[i3 + 1] - vy) * e;
-          vz += (lattice[i3 + 2] - vz) * e;
-        }
-        x = vx;
-        y = vy;
-        z = vz;
-      }
-      pos[i3] = x;
-      pos[i3 + 1] = y;
-      pos[i3 + 2] = z;
+      const x = bases[i].x + off[i3];
+      const y = bases[i].y + idle + off[i3 + 1];
+      const z = bases[i].z + off[i3 + 2];
 
       const targetScale =
         hov === i
@@ -502,14 +442,12 @@ export default function ClusterScene({ dim = false }: { dim?: boolean }) {
     for (let l = 0; l < links.length; l++) {
       const [a, b] = links[l];
       const a3 = a * 3, b3 = b * 3, l6 = l * 6;
-      /* read the final rendered node positions (post vortex/assembly) so links
-         stay welded to their nodes through the whole set piece */
-      linePos[l6] = pos[a3];
-      linePos[l6 + 1] = pos[a3 + 1];
-      linePos[l6 + 2] = pos[a3 + 2];
-      linePos[l6 + 3] = pos[b3];
-      linePos[l6 + 4] = pos[b3 + 1];
-      linePos[l6 + 5] = pos[b3 + 2];
+      linePos[l6] = bases[a].x + off[a3];
+      linePos[l6 + 1] = bases[a].y + Math.sin(t * 0.5 + phases[a]) * 0.1 + off[a3 + 1];
+      linePos[l6 + 2] = bases[a].z + off[a3 + 2];
+      linePos[l6 + 3] = bases[b].x + off[b3];
+      linePos[l6 + 4] = bases[b].y + Math.sin(t * 0.5 + phases[b]) * 0.1 + off[b3 + 1];
+      linePos[l6 + 5] = bases[b].z + off[b3 + 2];
 
       /* edges touching the hovered node light up; idle edges shimmer */
       const base = dim
@@ -564,7 +502,7 @@ export default function ClusterScene({ dim = false }: { dim?: boolean }) {
 
     /* camera: shared rig + this scene's own scroll dive toward the cluster.
        0.05 z-gain (vs the shared 0.04) keeps the push-in a touch snappier. */
-    const targetZ = (dim ? cameraRig.restZ + 2 : cameraRig.restZ) - vP * diveDepth;
+    const targetZ = (dim ? cameraRig.restZ + 2 : cameraRig.restZ) - store.progress * 3.6;
     applyCameraRig(state, targetZ, 0.05);
   });
 
