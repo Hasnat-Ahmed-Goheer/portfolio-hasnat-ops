@@ -44,6 +44,10 @@ export default function RouteCurtain() {
       if (!useUiStore.getState().booted || reduce) return;
 
       gsap.set(el, { display: "flex", yPercent: 0, opacity: 1 });
+      /* mark the viewport covered so entrance animations on the freshly-mounted
+         route (DecodeText, reveals) hold until the curtain lifts — otherwise
+         they finish unseen behind it and only show on a hard refresh */
+      useUiStore.getState().setRouteTransitioning(true);
       const tl = gsap.timeline();
       if (meterRef.current) {
         tl.fromTo(
@@ -58,6 +62,7 @@ export default function RouteCurtain() {
         ease: "power3.inOut",
         onComplete: () => {
           gsap.set(el, { display: "none", clearProps: "transform,opacity" });
+          useUiStore.getState().setRouteTransitioning(false);
           /* NOTE: no ScrollTrigger.refresh() here. LayoutShell is the single
              refresh owner per nav (it re-measures ~120ms after the pathname
              change, the documented mechanism — CLAUDE.md pitfall #3). The
