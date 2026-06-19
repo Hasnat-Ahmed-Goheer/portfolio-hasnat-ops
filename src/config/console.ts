@@ -89,6 +89,21 @@ export const sceneParams = {
        per-node spring (offSpring) resists, so they gather without collapsing
        and snap back on leave; gatherMax clamps the offset as a safety net. */
     magnetRadius: 2.9, magnetPull: 5.2, leadPull: 2.1, gatherMax: 2.2,
+    /* scroll set piece (the pinned intro drives sceneStore.progress 0→1): the
+       hive swirls around the view axis and funnels toward a tube the diving
+       camera flies through, then reassembles exactly on scroll-up (applied as a
+       non-destructive displacement on the render position, so the spring state
+       is untouched). vortexSwirl = max rotation (rad); vortexFunnel = how hard
+       the radius is pulled toward tubeRadius; vortexDepth = z-spread into a
+       tube; diveDepth = extra camera push at full progress. */
+    vortexSwirl: 2.4, vortexFunnel: 0.72, tubeRadius: 2.6, vortexDepth: 2.2,
+    diveDepth: 3.6,
+    /* phase 2 of the set piece (progress 0.5→1): the swirling hive flows OUT of
+       the vortex and snaps into an ordered lattice — chaos resolves into
+       architecture. Nodes ease toward a centered grid (cols auto from count);
+       lattice spacing is tuned to fill the dived camera's view. latticeDepth
+       layers rows into a few z-bands so it reads as a stack, not a flat sheet. */
+    latticeSpacingX: 0.58, latticeSpacingY: 0.5, latticeDepth: 0.45,
   },
   latent: { points: 36000, mobilePoints: 12000, clusters: 5 },
   pipeline: { tubes: 5, packetsPerTube: 5, seed: 11, dimSeed: 23 },
