@@ -6,6 +6,7 @@ import { lexicon } from "@/config/console";
 import { profile } from "@/content/profile";
 import { useConsoleStore } from "@/stores/consoleStore";
 import { useUiStore } from "@/stores/uiStore";
+import { click as soundClick } from "@/lib/sound";
 
 const links = [
   { href: "/", label: "home" },
@@ -58,6 +59,7 @@ export default function Nav() {
                 href={l.href}
                 onMouseEnter={() => prefetchScene(l.href)}
                 onFocus={() => prefetchScene(l.href)}
+                onClick={() => soundClick()}
                 aria-current={active ? "page" : undefined}
                 className={`rounded px-2.5 py-1.5 transition-colors ${
                   active
@@ -70,7 +72,10 @@ export default function Nav() {
             );
           })}
           <button
-            onClick={togglePalette}
+            onClick={() => {
+              soundClick();
+              togglePalette();
+            }}
             className="ml-2 hidden items-center gap-1.5 rounded border hairline px-2.5 py-1.5 text-muted transition-colors hover:border-accent/40 hover:text-text md:flex"
             aria-label="Open command palette (Cmd+K)"
           >

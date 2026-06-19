@@ -13,6 +13,8 @@ import { projects } from "@/content/projects";
 import { useTerminalStore, type LineKind } from "@/stores/terminalStore";
 import { useSceneStore } from "@/stores/sceneStore";
 import { useUiStore } from "@/stores/uiStore";
+import { useConsoleStore } from "@/stores/consoleStore";
+import { startTour } from "@/lib/tour";
 import { getFps, getWorstFps, resetWorst } from "@/lib/perfMeter";
 import {
   resolvePath,
@@ -208,6 +210,25 @@ export const commands: Record<string, Command> = {
         push(`themes: ${Object.keys(themes).join(", ")}`, "dim");
     },
   },
+  sound: {
+    desc: "toggle ambient console sound (on/off)",
+    usage: "sound <on|off>",
+    run: (args, push) => {
+      const console$ = useConsoleStore.getState();
+      const arg = (args[0] || "").toLowerCase();
+      if (arg === "on" || arg === "off") {
+        console$.setSoundEnabled(arg === "on");
+      } else if (!arg || arg === "toggle") {
+        console$.toggleSound();
+      } else {
+        push("usage: sound <on|off>", "dim");
+        return;
+      }
+      const on = useConsoleStore.getState().soundEnabled;
+      push(`uplink audio → ${on ? "on" : "off"}`, on ? "ok" : "dim");
+      if (on) push("subtle UI tones engaged. run `sound off` to mute.", "dim");
+    },
+  },
   history: {
     desc: "command history",
     run: (_a, push) =>
@@ -293,6 +314,27 @@ export const commands: Record<string, Command> = {
       push("  kubectl drain", "dim");
       void ctx;
     },
+  },
+
+  demo: {
+    desc: "run the guided tour of the console",
+    usage: "demo",
+    run: (_a, push, ctx) => {
+      useTerminalStore.getState().unlock("demo");
+      push("starting guided tour … (ESC to exit)", "ok");
+      ctx.close();
+      /* defer to the next tick so the terminal-close state commit lands FIRST,
+         in its own render, before the tour's state update — starting the tour in
+         the same synchronous batch as the close raced React's concurrent render
+         and the overlay sometimes never mounted (only the ⌘K path, which has no
+         terminal to close, was reliable). */
+      setTimeout(() => startTour(ctx), 0);
+    },
+  },
+  tour: {
+    desc: "",
+    hidden: true, // alias of `demo`
+    run: (a, push, ctx) => commands.demo.run(a, push, ctx),
   },
 
   /* ---------------- easter eggs (hidden from help) ---------------- */

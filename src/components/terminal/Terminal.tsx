@@ -19,6 +19,7 @@ import { useTerminalStore, type LineKind } from "@/stores/terminalStore";
 import { execute, complete, type CmdCtx } from "@/lib/commands";
 import { formatPath } from "@/lib/fakeFs";
 import { trapTab } from "@/lib/focusTrap";
+import { tick as soundTick, confirm as soundConfirm } from "@/lib/sound";
 
 const kindClass: Record<LineKind, string> = {
   in: "text-text",
@@ -39,6 +40,7 @@ export default function Terminal({ mode }: { mode: "palette" | "inline" }) {
 
   const [input, setInput] = useState("");
   const [suggestions, setSuggestions] = useState<string[]>([]);
+  const lastTick = useRef(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -82,7 +84,17 @@ export default function Terminal({ mode }: { mode: "palette" | "inline" }) {
   }, []);
 
   const onKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    /* very soft keystroke tick — single printable chars only, debounced so a
+       fast typist (or held key) can't machine-gun the synth. No-op when muted. */
+    if (e.key.length === 1 && !e.metaKey && !e.ctrlKey && !e.altKey) {
+      const now = e.timeStamp || performance.now();
+      if (now - lastTick.current > 45) {
+        lastTick.current = now;
+        soundTick();
+      }
+    }
     if (e.key === "Enter") {
+      if (input.trim()) soundConfirm();
       execute(input, ctx);
       setInput("");
       setSuggestions([]);

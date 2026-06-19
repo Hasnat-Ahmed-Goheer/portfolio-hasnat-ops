@@ -10,9 +10,10 @@
  */
 import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
-import { getFps } from "@/lib/perfMeter";
+import { getFps, getWorstFps } from "@/lib/perfMeter";
 import { useSceneStore } from "@/stores/sceneStore";
 import { useUiStore } from "@/stores/uiStore";
+import { useConsoleStore } from "@/stores/consoleStore";
 
 const SCENE_LABEL: Record<string, string> = {
   "/": "cluster.hive",
@@ -39,11 +40,17 @@ export default function TelemetryHud() {
   const pathname = usePathname();
   const booted = useUiStore((s) => s.booted);
   const reducedMotion = useUiStore((s) => s.reducedMotion);
+  /* the render tier the visitor's machine actually got — honest telemetry, not
+     a fixed badge (software/weak GPUs tier down to "mobile", see lib/a11y.ts) */
+  const gpuTier = useUiStore((s) => s.gpuTier);
+  const soundEnabled = useConsoleStore((s) => s.soundEnabled);
+  const toggleSound = useConsoleStore((s) => s.toggleSound);
   const [collapsed, setCollapsed] = useState(false);
 
   const dotRef = useRef<HTMLSpanElement>(null);
   const uptimeRef = useRef<HTMLSpanElement>(null);
   const fpsRef = useRef<HTMLSpanElement>(null);
+  const worstRef = useRef<HTMLSpanElement>(null);
   const podsRef = useRef<HTMLSpanElement>(null);
 
   /* visibility-aware interval (not rAF): these are ~1 Hz text writes that
@@ -63,6 +70,7 @@ export default function TelemetryHud() {
       if (uptimeRef.current) uptimeRef.current.textContent = `${hh}:${mm}:${ss}`;
       const fps = getFps();
       if (fpsRef.current) fpsRef.current.textContent = `${fps}`;
+      if (worstRef.current) worstRef.current.textContent = `${getWorstFps()}`;
       if (dotRef.current) dotRef.current.style.backgroundColor = fpsColor(fps);
       if (podsRef.current)
         podsRef.current.textContent = `${useSceneStore.getState().replicas}`;
@@ -125,15 +133,37 @@ export default function TelemetryHud() {
             <span className="hidden lg:inline">
               <span className="text-text/70">{scene}</span>
             </span>
+            <span className="hidden lg:inline">
+              tier <span className="text-text/70">{gpuTier}</span>
+            </span>
             <span>
               gpu <span ref={fpsRef} className="text-text/70">60</span>
               <span className="text-muted/50">fps</span>
+              <span className="hidden text-muted/50 lg:inline">
+                {" "}· low <span ref={worstRef} className="text-text/70">60</span>
+              </span>
             </span>
             <span>
               pods <span ref={podsRef} className="text-text/70">100</span>
             </span>
           </div>
         )}
+
+        {/* ambient-sound toggle — a real, keyboard-operable control. Off by
+            default for everyone; the click is the gesture that unlocks audio. */}
+        <button
+          onClick={() => toggleSound()}
+          aria-pressed={soundEnabled}
+          aria-label={soundEnabled ? "Mute console sound" : "Unmute console sound"}
+          className="flex items-center gap-1.5 border-l hairline px-2.5 py-2 text-muted transition-colors hover:text-text focus-visible:text-text focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent"
+        >
+          <span aria-hidden="true" className={soundEnabled ? "text-accent" : "text-muted/70"}>
+            {soundEnabled ? "♪" : "✕"}
+          </span>
+          <span aria-hidden="true" className="hidden text-muted/70 lg:inline">
+            snd
+          </span>
+        </button>
       </div>
     </div>
   );

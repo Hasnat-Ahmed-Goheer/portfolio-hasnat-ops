@@ -2,6 +2,7 @@
 
 import { create } from "zustand";
 import { HOME } from "@/lib/fakeFs";
+import { confirm as soundConfirm } from "@/lib/sound";
 
 export type LineKind = "in" | "out" | "ok" | "err" | "dim";
 export interface TermLine {
@@ -61,8 +62,12 @@ export const useTerminalStore = create<TerminalState>((set, get) => ({
     set({ hIdx: next });
     return history[next];
   },
-  unlock: (egg) =>
-    set((s) =>
-      s.unlocked.includes(egg) ? s : { unlocked: [...s.unlocked, egg] }
-    ),
+  unlock: (egg) => {
+    if (get().unlocked.includes(egg)) return;
+    /* first discovery → a soft confirm blip (no-op when muted). Fired OUTSIDE
+       the set updater: zustand updaters must be pure (React may call them more
+       than once), so side effects like audio belong here, not inside set(). */
+    soundConfirm();
+    set((s) => ({ unlocked: [...s.unlocked, egg] }));
+  },
 }));

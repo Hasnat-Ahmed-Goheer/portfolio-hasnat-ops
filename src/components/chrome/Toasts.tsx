@@ -25,6 +25,7 @@ const LABELS: Record<string, string> = {
   coffee: "coffee · 418 teapot",
   cowsay: "cowsay · moo",
   vim: "vim · no escape",
+  demo: "demo · guided tour",
 };
 
 const HOLD_MS = 3200;
