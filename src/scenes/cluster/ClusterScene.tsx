@@ -48,12 +48,7 @@ export default function ClusterScene({ dim = false }: { dim?: boolean }) {
       : sceneParams.cluster.packets;
 
   const meshRef = useRef<THREE.InstancedMesh>(null);
-  const haloRef = useRef<THREE.InstancedMesh>(null);
   const packetRef = useRef<THREE.InstancedMesh>(null);
-  /* additive glow shell behind each node — the same soft-halo language the
-     deployment pods and latent field use, so the hive reads as part of one
-     world rather than a flat wireframe. Skipped on mobile to spare fill rate. */
-  const showHalo = gpuTier !== "mobile";
   const hovered = useRef(-1);
   const lastHover = useRef(-1);
   const dragId = useRef(-1);
@@ -331,22 +326,13 @@ export default function ClusterScene({ dim = false }: { dim?: boolean }) {
       }
 
       dummy.position.set(x, y, z);
-      const nodeScale =
-        0.085 * sizes[i] * hoverScale[i] * life[i] * (1 + ping * 1.6);
-      dummy.scale.setScalar(nodeScale);
+      dummy.scale.setScalar(
+        0.085 * sizes[i] * hoverScale[i] * life[i] * (1 + ping * 1.6)
+      );
       dummy.updateMatrix();
       mesh.setMatrixAt(i, dummy.matrix);
-      /* halo shares the node's transform, just larger — one extra scale + write
-         per node, no new trig or allocation */
-      const halo = haloRef.current;
-      if (halo) {
-        dummy.scale.setScalar(nodeScale * 2.6);
-        dummy.updateMatrix();
-        halo.setMatrixAt(i, dummy.matrix);
-      }
     }
     mesh.instanceMatrix.needsUpdate = true;
-    if (haloRef.current) haloRef.current.instanceMatrix.needsUpdate = true;
 
     const lineCol = lineGeo.attributes.color.array as Float32Array;
     for (let l = 0; l < links.length; l++) {
@@ -448,19 +434,6 @@ export default function ClusterScene({ dim = false }: { dim?: boolean }) {
         radius={11}
         pulse={dim ? sceneParams.cluster.pingPeriod : 0}
       />
-      {showHalo && (
-        <instancedMesh ref={haloRef} args={[undefined, undefined, count]}>
-          <icosahedronGeometry args={[1, 1]} />
-          <meshBasicMaterial
-            color={colors.accent}
-            toneMapped={false}
-            transparent
-            opacity={dim ? 0.05 : 0.09}
-            depthWrite={false}
-            blending={THREE.AdditiveBlending}
-          />
-        </instancedMesh>
-      )}
       <instancedMesh
         ref={meshRef}
         args={[undefined, undefined, count]}

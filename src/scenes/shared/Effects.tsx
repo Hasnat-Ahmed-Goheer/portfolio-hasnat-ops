@@ -28,7 +28,12 @@ export default function Effects({ degraded = false }: { degraded?: boolean }) {
         intensity={degraded ? fx.bloomIntensity * 0.4 : fx.bloomIntensity}
         luminanceThreshold={fx.bloomThreshold}
       />
-      <Noise opacity={sceneReady ? fx.grainOpacity : 0} />
+      {/* premultiply: the grain is MODULATED by scene luminance instead of
+          screen-blended as a flat layer. A plain screen blend lifts pure
+          blacks toward grey, veiling the near-black scene with a "whiter
+          shade" the moment sceneReady gates it on; premultiply keeps the
+          dark field genuinely dark and only textures the lit nodes/field. */}
+      <Noise premultiply opacity={sceneReady ? fx.grainOpacity : 0} />
       <Vignette darkness={fx.vignetteDarkness} eskil={false} />
     </EffectComposer>
   );
