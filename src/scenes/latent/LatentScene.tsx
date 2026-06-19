@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Latent-space particle field (the Pinecone-as-starfield). ~42k instanced
+ * Latent-space particle field (the Pinecone-as-starfield). ~36k instanced
  * points in a custom shader. Scroll (sceneStore.progress) morphs the cloud
  * into 5 labeled skill clusters; pointer repels points; hovering a skill
  * in the DOM excites its cluster. "lab" variant: free-floating, amber.
@@ -9,9 +9,12 @@
 import * as THREE from "three";
 import { useEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
-import { sceneParams, SHOCK_DECAY } from "@/config/console";
+import { cameraRig, sceneParams, SHOCK_DECAY } from "@/config/console";
+import { applyCameraRig } from "../shared/cameraRig";
+import { pointerToPlane } from "../shared/pointerPlane";
 import { themes } from "@/config/theme";
 import { useSceneStore } from "@/stores/sceneStore";
+import { useLabStore, LAB_FIELD_DEFAULTS } from "@/stores/labStore";
 import { useUiStore } from "@/stores/uiStore";
 import { mulberry32 } from "../shared/rng";
 import { glslSimplexNoise } from "../shared/noise.glsl";
@@ -27,24 +30,27 @@ const FLOW_NOISE = /* glsl */ `
   float drift = 1.0 - uMorph * 0.72;
   /* single snoise eval (was snoiseVec3 = 3 evals). At this point density the
      scalar-driven displacement is visually indistinguishable, for ~3x less
-     vertex-noise cost — the main 60fps lever on the about page. */
-  float n = snoise(pos * 0.3 + vec3(0.0, 0.0, uTime * 0.06));
+     vertex-noise cost — the main 60fps lever on the about page. uNoiseScale /
+     uFlowSpeed are the /lab control panel re-tuning the field live (1.0 = stock). */
+  float n = snoise(pos * (0.3 * uNoiseScale) + vec3(0.0, 0.0, uTime * 0.06 * uFlowSpeed));
   vec3 flow = vec3(n, n * 0.8, n * 0.5);
   vFlow = clamp(abs(n) * 0.7, 0.0, 1.0);
-  pos += flow * (0.4 + aRand * 0.28) * drift;
+  pos += flow * (0.4 + aRand * 0.28) * drift * uSpread;
 `;
 
 /* cheap trig drift (mobile / software renderers): same loose→settled feel and
    amplitude with zero noise evals, so weak GPUs match main's speed. */
 const FLOW_CHEAP = /* glsl */ `
   float drift = 1.0 - uMorph * 0.72;
+  float fScale = 0.6 * uNoiseScale;
+  float fSpeed = uTime * uFlowSpeed;
   vec3 flow = vec3(
-    sin(pos.y * 0.6 + uTime * 0.5 + aRand * 6.2831),
-    cos(pos.z * 0.6 + uTime * 0.4 + aRand * 6.2831),
-    sin(pos.x * 0.6 + uTime * 0.45 + aRand * 6.2831)
+    sin(pos.y * fScale + fSpeed * 0.5 + aRand * 6.2831),
+    cos(pos.z * fScale + fSpeed * 0.4 + aRand * 6.2831),
+    sin(pos.x * fScale + fSpeed * 0.45 + aRand * 6.2831)
   ) * 0.4;
   vFlow = clamp(length(flow.xy) * 0.5, 0.0, 1.0);
-  pos += flow * (0.4 + aRand * 0.28) * drift;
+  pos += flow * (0.4 + aRand * 0.28) * drift * uSpread;
 `;
 
 /* the noise chunks are only compiled into the full-tier variant */
@@ -56,6 +62,9 @@ uniform float uActive;
 uniform float uShock;
 uniform vec3 uPointer;
 uniform float uSize;
+uniform float uNoiseScale;
+uniform float uFlowSpeed;
+uniform float uSpread;
 attribute vec3 aTarget;
 attribute float aCluster;
 attribute float aRand;
@@ -97,6 +106,7 @@ ${useNoise ? FLOW_NOISE : FLOW_CHEAP}
 const FRAG = /* glsl */ `
 uniform vec3 uColor;
 uniform vec3 uActiveColor;
+uniform float uEnergy;
 varying float vActive;
 varying float vFade;
 varying float vTwinkle;
@@ -109,7 +119,7 @@ void main() {
      point instead of a flat additive disc */
   float halo = smoothstep(0.5, 0.06, d);
   float core = pow(smoothstep(0.32, 0.0, d), 1.6);
-  float a = (halo * 0.5 + core * 0.85) * vFade * vTwinkle;
+  float a = (halo * 0.5 + core * 0.85) * vFade * vTwinkle * uEnergy;
   /* far points recede into the void for depth */
   a *= mix(1.0, 0.35, vDepth);
   if (a < 0.01) discard;
@@ -144,7 +154,6 @@ export default function LatentScene({
 
   const matRef = useRef<THREE.ShaderMaterial>(null);
   const groupRef = useRef<THREE.Group>(null);
-  const tmp = useMemo(() => new THREE.Vector3(), []);
   const shock = useRef(0);
   const lastDisturb = useRef(0);
 
@@ -194,6 +203,10 @@ export default function LatentScene({
       uShock: { value: 0 },
       uPointer: { value: new THREE.Vector3(99, 99, 99) },
       uSize: { value: 1.6 },
+      uNoiseScale: { value: LAB_FIELD_DEFAULTS.noiseScale },
+      uFlowSpeed: { value: LAB_FIELD_DEFAULTS.flowSpeed },
+      uSpread: { value: LAB_FIELD_DEFAULTS.spread },
+      uEnergy: { value: LAB_FIELD_DEFAULTS.energy },
       uColor: { value: new THREE.Color("#8b5cf6") },
       uActiveColor: { value: new THREE.Color("#8b5cf6") },
     }),
@@ -226,6 +239,17 @@ export default function LatentScene({
     const targetMorph = variant === "lab" ? 0 : store.progress;
     u.uMorph.value += (targetMorph - u.uMorph.value) * 0.06;
 
+    /* /lab control panel: only the lab variant reads the sliders; everywhere
+       else the field stays at its stock 1.0 tuning. Lerp so a slider drag eases
+       in rather than snapping. */
+    if (variant === "lab") {
+      const lab = useLabStore.getState();
+      u.uNoiseScale.value += (lab.noiseScale - u.uNoiseScale.value) * 0.08;
+      u.uFlowSpeed.value += (lab.flowSpeed - u.uFlowSpeed.value) * 0.08;
+      u.uSpread.value += (lab.spread - u.uSpread.value) * 0.08;
+      u.uEnergy.value += (lab.energy - u.uEnergy.value) * 0.08;
+    }
+
     /* terminal eggs ripple the field */
     if (store.disturb !== lastDisturb.current) {
       lastDisturb.current = store.disturb;
@@ -246,23 +270,18 @@ export default function LatentScene({
       (u.uActiveColor.value as THREE.Color).copy(clusterColors[idx]);
     }
 
-    /* pointer in world space (plane z≈0) */
-    const cam = state.camera;
-    tmp.set(state.pointer.x, state.pointer.y, 0.5).unproject(cam);
-    const dir = tmp.sub(cam.position).normalize();
-    const k = dir.z !== 0 ? -cam.position.z / dir.z : 0;
-    u.uPointer.value.copy(cam.position).addScaledVector(dir, k);
+    /* pointer in world space (plane z≈0) — shared projection so the cursor
+       reacts identically to the cluster hive */
+    pointerToPlane(state.pointer, state.camera, 0, u.uPointer.value);
 
     if (groupRef.current) {
-      groupRef.current.rotation.y =
-        Math.sin(state.clock.elapsedTime * 0.05) * 0.12 + state.pointer.x * 0.05;
-      groupRef.current.rotation.x = state.pointer.y * 0.03;
+      /* gentle autonomous drift only — pointer-driven group rotation was
+         removed: it fought the per-point uPointer repulsion and made the whole
+         field swim under the cursor, reading as drift rather than intent. */
+      groupRef.current.rotation.y = Math.sin(state.clock.elapsedTime * 0.05) * 0.12;
+      groupRef.current.rotation.x = 0;
     }
-    /* shared cursor-parallax feel across scenes (see PipelineScene) */
-    cam.position.x += (state.pointer.x * 0.5 - cam.position.x) * 0.04;
-    cam.position.y += (state.pointer.y * 0.3 - cam.position.y) * 0.04;
-    cam.position.z += (8.5 - cam.position.z) * 0.04;
-    cam.lookAt(0, 0, 0);
+    applyCameraRig(state, cameraRig.restZ);
   });
 
   return (

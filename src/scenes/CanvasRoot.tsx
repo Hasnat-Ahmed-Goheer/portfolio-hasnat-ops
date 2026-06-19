@@ -11,6 +11,7 @@ import { Canvas, useFrame } from "@react-three/fiber";
 import { PerformanceMonitor } from "@react-three/drei";
 import { usePathname } from "next/navigation";
 import { useUiStore } from "@/stores/uiStore";
+import { cameraRig } from "@/config/console";
 import { tick } from "@/lib/perfMeter";
 import Effects from "./shared/Effects";
 
@@ -148,7 +149,7 @@ export default function CanvasRoot() {
       style={{ opacity: visible && sceneReady ? 1 : 0 }}
     >
       <Canvas
-        camera={{ position: [0, 0, 9], fov: 50 }}
+        camera={{ position: [0, 0, cameraRig.restZ], fov: cameraRig.fov }}
         dpr={degraded ? 1 : gpuTier === "mobile" ? [1, 1.5] : [1, 1.75]}
         /* antialias off: scenes are points/wireframes + bloom, MSAA buys
            nothing visible here and costs a full-screen multisample resolve */

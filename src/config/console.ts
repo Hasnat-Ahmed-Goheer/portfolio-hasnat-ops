@@ -38,6 +38,20 @@ export const bootLines = [
    (2.0–2.4) and pulses felt subtly out of step between routes. */
 export const SHOCK_DECAY = 2.2;
 
+/* Shared camera rig — one resting eye distance + fov + cursor-parallax law for
+   every scene, so route hops read as one continuous camera instead of three.
+   Scenes keep their own character through the *targetZ* they feed the rig
+   (e.g. cluster's scroll dive), never through a different resting distance.
+   Previously each scene rested at its own Z (cluster 9, latent 8.5, pipeline 8)
+   and /work/[slug] orbited — the dominant cause of the "different worlds" feel. */
+export const cameraRig = {
+  restZ: 8.5,
+  fov: 50,
+  parallaxX: 0.5,
+  parallaxY: 0.3,
+  gain: 0.04,
+} as const;
+
 export const sceneParams = {
   /* seed / dimSeed: the dim "twin" routes (/contact, /experience) reseed their
      layout so they no longer overlay their parent scene pixel-for-pixel — a

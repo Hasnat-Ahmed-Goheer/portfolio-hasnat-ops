@@ -228,3 +228,49 @@ body {
   0%, 100% { opacity: 0.35; }
   50% { opacity: 0.12; }
 }
+
+/* /lab field-control sliders — themed track + accent thumb, focus-visible ring */
+.lab-range {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 4px;
+  border-radius: 9999px;
+  background: color-mix(in srgb, var(--accent2) 22%, var(--bg-elev));
+  outline: none;
+  cursor: pointer;
+}
+.lab-range:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+.lab-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--accent2);
+  border: 2px solid var(--bg);
+  transition: transform 0.15s ease;
+}
+.lab-range::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--bg);
+  border-radius: 50%;
+  background: var(--accent2);
+}
+.lab-range:hover::-webkit-slider-thumb {
+  transform: scale(1.15);
+}
+.lab-range:focus-visible {
+  box-shadow: 0 0 0 2px var(--accent2);
+}
+@media (prefers-reduced-motion: reduce) {
+  .lab-range::-webkit-slider-thumb {
+    transition: none;
+  }
+  .lab-range:hover::-webkit-slider-thumb {
+    transform: none;
+  }
+}

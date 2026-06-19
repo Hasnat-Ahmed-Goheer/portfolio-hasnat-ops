@@ -9,7 +9,7 @@ import * as THREE from "three";
 import { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
-import { sceneParams, SHOCK_DECAY } from "@/config/console";
+import { cameraRig, sceneParams, SHOCK_DECAY } from "@/config/console";
 import { themes } from "@/config/theme";
 import { useSceneStore } from "@/stores/sceneStore";
 import { useUiStore } from "@/stores/uiStore";
@@ -33,8 +33,17 @@ export default function DeploymentScene() {
     gpuTier === "mobile"
       ? sceneParams.deployment.mobilePods
       : sceneParams.deployment.pods;
+  const TRAFFIC = gpuTier === "mobile" ? 3 : 5;
 
   const podsRef = useRef<THREE.InstancedMesh>(null);
+  /* faint additive shell mirroring each pod's matrix — lifts the flat-lit pods
+     into the same luminous/bloom family as every other scene's emissive
+     foreground, instead of reading as solid objects under the shared post */
+  const haloRef = useRef<THREE.InstancedMesh>(null);
+  /* a few amber payloads always riding the rail loop — carries the "data in
+     motion" accent2 vocabulary that cluster + pipeline establish, so traffic
+     reads alike on /work/[slug] too (it had no amber accent at all before) */
+  const trafficRef = useRef<THREE.InstancedMesh>(null);
   const coreRef = useRef<THREE.Mesh>(null);
   const dummy = useMemo(() => new THREE.Object3D(), []);
   /* terminal-egg shock: pods + core flare, then settle */
@@ -71,14 +80,36 @@ export default function DeploymentScene() {
     shock.current *= Math.exp(-SHOCK_DECAY * dt);
     const flare = 1 + shock.current * 0.55;
 
+    const halo = haloRef.current;
     for (let i = 0; i < count; i++) {
       const f = i / count;
       placePod(dummy, motif, f, i, t, railCurve);
       dummy.scale.multiplyScalar(flare);
       dummy.updateMatrix();
       mesh.setMatrixAt(i, dummy.matrix);
+      /* same pose, scaled out — the glow shell rides each pod */
+      if (halo) {
+        dummy.scale.multiplyScalar(1.7);
+        dummy.updateMatrix();
+        halo.setMatrixAt(i, dummy.matrix);
+      }
     }
     mesh.instanceMatrix.needsUpdate = true;
+    if (halo) halo.instanceMatrix.needsUpdate = true;
+
+    /* amber traffic riding the rail loop (every motif), shock-reactive */
+    const traffic = trafficRef.current;
+    if (traffic) {
+      for (let p = 0; p < TRAFFIC; p++) {
+        const at = ((t * 0.06 + p / TRAFFIC) % 1 + 1) % 1;
+        railCurve.getPointAt(at, dummy.position);
+        dummy.rotation.set(0, 0, 0);
+        dummy.scale.setScalar(1 + shock.current * 0.8);
+        dummy.updateMatrix();
+        traffic.setMatrixAt(p, dummy.matrix);
+      }
+      traffic.instanceMatrix.needsUpdate = true;
+    }
 
     if (coreRef.current) {
       coreRef.current.rotation.y = t * 0.25 + shock.current * 2.5;
@@ -90,14 +121,31 @@ export default function DeploymentScene() {
 
   return (
     <group>
-      <AmbientField opacity={0.8} radius={9} />
+      {/* radius matched to latent's dust cloud (11) so the world doesn't feel
+          smaller on this sparse-foreground scene — sparse scene, fuller dust */}
+      <AmbientField opacity={0.8} radius={11} />
       <mesh ref={coreRef}>
         <icosahedronGeometry args={[0.85, 1]} />
         <meshBasicMaterial color={colors.accent} wireframe toneMapped={false} />
       </mesh>
+      <instancedMesh ref={haloRef} args={[undefined, undefined, count]}>
+        <boxGeometry args={[0.22, 0.22, 0.22]} />
+        <meshBasicMaterial
+          color={podColor}
+          toneMapped={false}
+          transparent
+          opacity={0.22}
+          depthWrite={false}
+          blending={THREE.AdditiveBlending}
+        />
+      </instancedMesh>
       <instancedMesh ref={podsRef} args={[undefined, undefined, count]}>
         <boxGeometry args={[0.22, 0.22, 0.22]} />
         <meshBasicMaterial color={podColor} toneMapped={false} />
+      </instancedMesh>
+      <instancedMesh ref={trafficRef} args={[undefined, undefined, TRAFFIC]}>
+        <sphereGeometry args={[0.06, 10, 10]} />
+        <meshBasicMaterial color={colors.accent2} toneMapped={false} />
       </instancedMesh>
       <OrbitControls
         makeDefault
@@ -106,7 +154,14 @@ export default function DeploymentScene() {
         enableDamping
         dampingFactor={0.08}
         autoRotate
-        autoRotateSpeed={0.7}
+        /* clamp the orbit radius to the shared resting eye distance so this
+           scene actually sits at cameraRig.restZ regardless of where the
+           previous (lerping) scene left the persistent camera — min==max
+           forces it every update (audit MED-2). Slowed from 0.7 to share the
+           languid idle tempo of the other scenes instead of reading hyperactive. */
+        minDistance={cameraRig.restZ}
+        maxDistance={cameraRig.restZ}
+        autoRotateSpeed={0.38}
       />
     </group>
   );

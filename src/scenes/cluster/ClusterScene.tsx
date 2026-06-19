@@ -10,7 +10,9 @@
 import * as THREE from "three";
 import { useEffect, useMemo, useRef } from "react";
 import { useFrame, type ThreeEvent } from "@react-three/fiber";
-import { sceneParams } from "@/config/console";
+import { cameraRig, sceneParams } from "@/config/console";
+import { applyCameraRig } from "../shared/cameraRig";
+import { pointerToPlane } from "../shared/pointerPlane";
 import { themes } from "@/config/theme";
 import { useSceneStore } from "@/stores/sceneStore";
 import { useUiStore } from "@/stores/uiStore";
@@ -46,7 +48,12 @@ export default function ClusterScene({ dim = false }: { dim?: boolean }) {
       : sceneParams.cluster.packets;
 
   const meshRef = useRef<THREE.InstancedMesh>(null);
+  const haloRef = useRef<THREE.InstancedMesh>(null);
   const packetRef = useRef<THREE.InstancedMesh>(null);
+  /* additive glow shell behind each node — the same soft-halo language the
+     deployment pods and latent field use, so the hive reads as part of one
+     world rather than a flat wireframe. Skipped on mobile to spare fill rate. */
+  const showHalo = gpuTier !== "mobile";
   const hovered = useRef(-1);
   const lastHover = useRef(-1);
   const dragId = useRef(-1);
@@ -255,21 +262,12 @@ export default function ClusterScene({ dim = false }: { dim?: boolean }) {
     }
 
     /* pointer in world space (z=0 plane) — the whole hive leans away */
-    tmp.set(state.pointer.x, state.pointer.y, 0.5).unproject(cam);
-    tmp.sub(cam.position).normalize();
-    if (tmp.z !== 0) {
-      const k = -cam.position.z / tmp.z;
-      pointerWorld.copy(cam.position).addScaledVector(tmp, k);
-    }
+    pointerToPlane(state.pointer, cam, 0, pointerWorld);
 
     /* drag target point (plane at dragged node's depth) */
     let dragPoint: THREE.Vector3 | null = null;
     if (dragId.current >= 0) {
-      tmp.set(state.pointer.x, state.pointer.y, 0.5).unproject(cam);
-      const dir = tmp.sub(cam.position).normalize();
-      const dz = bases[dragId.current].z - cam.position.z;
-      const k = dir.z !== 0 ? dz / dir.z : 0;
-      dragPoint = dragVec.copy(cam.position).addScaledVector(dir, k);
+      dragPoint = pointerToPlane(state.pointer, cam, bases[dragId.current].z, dragVec);
       /* drag-point velocity (world units/sec) for fling-on-release */
       if (dragging.current && dt > 0) {
         const inv = 1 / dt;
@@ -333,13 +331,22 @@ export default function ClusterScene({ dim = false }: { dim?: boolean }) {
       }
 
       dummy.position.set(x, y, z);
-      dummy.scale.setScalar(
-        0.085 * sizes[i] * hoverScale[i] * life[i] * (1 + ping * 1.6)
-      );
+      const nodeScale =
+        0.085 * sizes[i] * hoverScale[i] * life[i] * (1 + ping * 1.6);
+      dummy.scale.setScalar(nodeScale);
       dummy.updateMatrix();
       mesh.setMatrixAt(i, dummy.matrix);
+      /* halo shares the node's transform, just larger — one extra scale + write
+         per node, no new trig or allocation */
+      const halo = haloRef.current;
+      if (halo) {
+        dummy.scale.setScalar(nodeScale * 2.6);
+        dummy.updateMatrix();
+        halo.setMatrixAt(i, dummy.matrix);
+      }
     }
     mesh.instanceMatrix.needsUpdate = true;
+    if (haloRef.current) haloRef.current.instanceMatrix.needsUpdate = true;
 
     const lineCol = lineGeo.attributes.color.array as Float32Array;
     for (let l = 0; l < links.length; l++) {
@@ -403,13 +410,10 @@ export default function ClusterScene({ dim = false }: { dim?: boolean }) {
       pmesh.instanceMatrix.needsUpdate = true;
     }
 
-    /* camera: scroll push-in + cursor parallax */
-    const targetZ = (dim ? 10.5 : 9) - store.progress * 3.6;
-    cam.position.z += (targetZ - cam.position.z) * 0.05;
-    /* shared cursor-parallax feel across scenes (see PipelineScene) */
-    cam.position.x += (state.pointer.x * 0.5 - cam.position.x) * 0.04;
-    cam.position.y += (state.pointer.y * 0.3 - cam.position.y) * 0.04;
-    cam.lookAt(0, 0, 0);
+    /* camera: shared rig + this scene's own scroll dive toward the cluster.
+       0.05 z-gain (vs the shared 0.04) keeps the push-in a touch snappier. */
+    const targetZ = (dim ? cameraRig.restZ + 2 : cameraRig.restZ) - store.progress * 3.6;
+    applyCameraRig(state, targetZ, 0.05);
   });
 
   const onMove = (e: ThreeEvent<PointerEvent>) => {
@@ -441,9 +445,22 @@ export default function ClusterScene({ dim = false }: { dim?: boolean }) {
     <group>
       <AmbientField
         opacity={dim ? 0.45 : 0.8}
-        radius={10}
+        radius={11}
         pulse={dim ? sceneParams.cluster.pingPeriod : 0}
       />
+      {showHalo && (
+        <instancedMesh ref={haloRef} args={[undefined, undefined, count]}>
+          <icosahedronGeometry args={[1, 1]} />
+          <meshBasicMaterial
+            color={colors.accent}
+            toneMapped={false}
+            transparent
+            opacity={dim ? 0.05 : 0.09}
+            depthWrite={false}
+            blending={THREE.AdditiveBlending}
+          />
+        </instancedMesh>
+      )}
       <instancedMesh
         ref={meshRef}
         args={[undefined, undefined, count]}

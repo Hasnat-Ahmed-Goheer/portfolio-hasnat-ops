@@ -9,7 +9,8 @@
 import * as THREE from "three";
 import { useEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
-import { sceneParams, SHOCK_DECAY } from "@/config/console";
+import { cameraRig, sceneParams, SHOCK_DECAY } from "@/config/console";
+import { applyCameraRig } from "../shared/cameraRig";
 import { themes } from "@/config/theme";
 import { useSceneStore } from "@/stores/sceneStore";
 import { useUiStore } from "@/stores/uiStore";
@@ -162,16 +163,12 @@ export default function PipelineScene({ dim = false }: { dim?: boolean }) {
       mesh.instanceMatrix.needsUpdate = true;
     }
 
-    const cam = state.camera;
-    cam.position.x += (state.pointer.x * 0.5 - cam.position.x) * 0.04;
-    cam.position.y += (state.pointer.y * 0.3 - cam.position.y) * 0.04;
-    cam.position.z += (8 - cam.position.z) * 0.04;
-    cam.lookAt(0, 0, 0);
+    applyCameraRig(state, cameraRig.restZ);
   });
 
   return (
     <group rotation={[0.06, 0, -0.06]}>
-      <AmbientField opacity={dim ? 0.5 : 0.8} radius={10} />
+      <AmbientField opacity={dim ? 0.5 : 0.8} radius={11} />
       {geos.map((g, k) => (
         <mesh key={k} geometry={g} material={mats[k]} />
       ))}

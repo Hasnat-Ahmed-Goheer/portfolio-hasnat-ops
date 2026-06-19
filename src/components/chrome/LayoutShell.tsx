@@ -13,8 +13,11 @@ import { gsap, ScrollTrigger } from "@/lib/motion";
 import { useCapabilities } from "@/lib/a11y";
 import { useUiStore } from "@/stores/uiStore";
 import { useTerminalStore } from "@/stores/terminalStore";
-import { useConsoleStore } from "@/stores/consoleStore";
+import { useConsoleStore, rehydrateSound } from "@/stores/consoleStore";
+import { useSceneStore } from "@/stores/sceneStore";
+import { uplink as soundUplink, hum as soundHum } from "@/lib/sound";
 import Nav from "./Nav";
+import SceneScrim from "./SceneScrim";
 import Footer from "./Footer";
 import Cursor from "./Cursor";
 import ScrollProgress from "./ScrollProgress";
@@ -22,6 +25,7 @@ import HoverTip from "./HoverTip";
 import Toasts from "./Toasts";
 import TelemetryHud from "./TelemetryHud";
 import CommandPalette from "./CommandPalette";
+import TourOverlay from "./TourOverlay";
 import BootSequence from "../terminal/BootSequence";
 import Terminal from "../terminal/Terminal";
 
@@ -31,8 +35,39 @@ export default function LayoutShell({ children }: { children: ReactNode }) {
   useCapabilities();
   const reducedMotion = useUiStore((s) => s.reducedMotion);
   const setOpen = useTerminalStore((s) => s.setOpen);
+  const booted = useUiStore((s) => s.booted);
   const pathname = usePathname();
   const lenisRef = useRef<LenisRef>(null);
+  const bootChimed = useRef(false);
+
+  /* rehydrate the persisted sound preference once on mount (client-only;
+     never creates an AudioContext — that waits for a real user gesture) */
+  useEffect(() => {
+    rehydrateSound();
+  }, []);
+
+  /* boot-complete uplink tone — fires once, no-op unless sound was enabled in a
+     prior session AND the user has since interacted (engine self-gates) */
+  useEffect(() => {
+    if (booted && !bootChimed.current) {
+      bootChimed.current = true;
+      soundUplink();
+    }
+  }, [booted]);
+
+  /* scene-disturb / egg-pulse → a low hum swell. Subscribes to the disturb
+     counter OUTSIDE the render loop (store.subscribe, not useFrame), throttled,
+     and ambient-gated so it only sounds when audio is already unlocked. */
+  useEffect(() => {
+    let last = 0;
+    return useSceneStore.subscribe((s, prev) => {
+      if (s.disturb === prev.disturb) return;
+      const now = performance.now();
+      if (now - last < 250) return;
+      last = now;
+      soundHum();
+    });
+  }, []);
 
   /* GSAP ticker drives Lenis; Lenis updates ScrollTrigger */
   useEffect(() => {
@@ -81,6 +116,7 @@ export default function LayoutShell({ children }: { children: ReactNode }) {
       </a>
       <BootSequence />
       <CanvasRoot />
+      <SceneScrim />
       <Nav />
       <ScrollProgress />
       <HoverTip />
@@ -88,6 +124,7 @@ export default function LayoutShell({ children }: { children: ReactNode }) {
       <Footer />
       <Terminal mode="palette" />
       <CommandPalette />
+      <TourOverlay />
       <TelemetryHud />
       <Toasts />
       <Cursor />

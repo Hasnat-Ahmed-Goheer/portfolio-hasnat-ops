@@ -39,6 +39,10 @@ export const DEFAULT_THEME: ThemeName = "ops";
 export const fx = {
   bloomIntensity: 0.9,
   bloomThreshold: 0.18,
-  grainOpacity: 0.085,
+  /* barely-there filmic hint, gated on sceneReady (see Effects.tsx). Kept low
+     on purpose: the grain is texture, not a load-state mask (the boot curtain +
+     sceneReady reveal already hide the converging field), and at higher values
+     its screen-blended static shimmered over body copy on content routes. */
+  grainOpacity: 0.022,
   vignetteDarkness: 0.55,
 };
