@@ -232,7 +232,13 @@ export default function HomeSections() {
               <span className="text-ok">●</span> {profile.availability}
             </span>
             <span>loc: {profile.location}</span>
-            <span className="hidden sm:inline">drag the cluster · press ⌘K</span>
+            {/* interaction affordance — the pulsing dot draws the eye to the
+                hint so the magnetism/drag don't go undiscovered (a reviewer
+                flagged the cluster interaction as intriguing-but-hidden) */}
+            <span className="hidden items-center gap-1.5 text-accent/90 sm:inline-flex">
+              <span className="status-dot inline-block h-1.5 w-1.5 rounded-full bg-accent" />
+              move to gather · drag a node · ⌘K
+            </span>
           </div>
         </div>
       </section>

@@ -55,6 +55,14 @@ export default function ClusterScene({ dim = false }: { dim?: boolean }) {
   const lastDisturb = useRef(0);
   /* pending click shockwave origin (-1 = none), consumed in useFrame */
   const shockId = useRef(-1);
+  /* cursor magnetism: only engages for a real, recently-moved FINE pointer.
+     Without this gate a touch device (or an idle tab) leaves state.pointer at
+     the origin, and the gravity well would reel every node to screen-center.
+     magnetExpiry is the wall-clock time the current activity lapses at. */
+  const magnetExpiry = useRef(0);
+  /* nearest node to the cursor, tracked across frames so the "lead" gets the
+     hardest pull (one frame of lag is invisible, saves a second pass) */
+  const leadNode = useRef(-1);
   /* /contact uplink beacon: a bright ring expands from origin on a fixed
      period, in sync with the ambient dust pulse (dim variant only) */
   const pingClock = useRef(0);
@@ -174,6 +182,18 @@ export default function ClusterScene({ dim = false }: { dim?: boolean }) {
     };
   }, [vel, dragVel]);
 
+  /* arm cursor magnetism on real mouse movement only — touch pointers and an
+     idle cursor must NOT engage it (see magnetExpiry). Each move extends the
+     window ~0.6s so the well fades out shortly after the cursor stops. */
+  useEffect(() => {
+    const onMove = (e: PointerEvent) => {
+      if (e.pointerType === "touch") return;
+      magnetExpiry.current = performance.now() + 600;
+    };
+    window.addEventListener("pointermove", onMove, { passive: true });
+    return () => window.removeEventListener("pointermove", onMove);
+  }, []);
+
   const dummy = useMemo(() => new THREE.Object3D(), []);
   const tmp = useMemo(() => new THREE.Vector3(), []);
   const pointerWorld = useMemo(() => new THREE.Vector3(99, 99, 0), []);
@@ -256,8 +276,34 @@ export default function ClusterScene({ dim = false }: { dim?: boolean }) {
       shockId.current = -1;
     }
 
-    /* pointer in world space (z=0 plane) — the whole hive leans away */
+    /* pointer in world space (z=0 plane) — the hive reaches toward it */
     pointerToPlane(state.pointer, cam, 0, pointerWorld);
+
+    /* cursor magnetism: armed only by a recent real mouse move (magnetExpiry),
+       and eased down by the scroll dive so it hands off to the camera push as
+       you descend. Find the nearest node (the "lead") so it can be pulled
+       hardest — done once per frame here, reused in the node loop below. */
+    const { magnetRadius, magnetPull, leadPull, gatherMax } =
+      sceneParams.cluster;
+    const magnetGain =
+      performance.now() < magnetExpiry.current ? 1 - store.progress : 0;
+    if (magnetGain > 0) {
+      let best = -1;
+      let bestD = magnetRadius * magnetRadius;
+      for (let i = 0; i < count; i++) {
+        if (i >= liveCount) continue;
+        const dx = pointerWorld.x - (bases[i].x + off[i * 3]);
+        const dy = pointerWorld.y - (bases[i].y + off[i * 3 + 1]);
+        const d2 = dx * dx + dy * dy;
+        if (d2 < bestD) {
+          bestD = d2;
+          best = i;
+        }
+      }
+      leadNode.current = best;
+    } else {
+      leadNode.current = -1;
+    }
 
     /* drag target point (plane at dragged node's depth) */
     let dragPoint: THREE.Vector3 | null = null;
@@ -292,19 +338,30 @@ export default function ClusterScene({ dim = false }: { dim?: boolean }) {
         off[i3 + 1] = THREE.MathUtils.clamp(dragPoint.y - bases[i].y, -3, 3);
         vel[i3] = vel[i3 + 1] = vel[i3 + 2] = 0;
       } else {
-        /* gentle field repulsion so the hive reacts to the cursor itself */
-        const px = bases[i].x + off[i3] - pointerWorld.x;
-        const py = bases[i].y + off[i3 + 1] - pointerWorld.y;
-        const pd = Math.sqrt(px * px + py * py);
-        if (pd < 1.7 && pd > 0.0001) {
-          const f = ((1.7 - pd) / 1.7) * 3.4 * dt;
-          vel[i3] += (px / pd) * f;
-          vel[i3 + 1] += (py / pd) * f;
+        /* cursor magnetism: nodes within magnetRadius are drawn TOWARD the
+           pointer (a gravity well), the nearest "lead" node hardest, so the
+           hive visibly reaches for the cursor and gathers a transient
+           constellation. The spring below resists, so they lean without
+           collapsing and snap back when the cursor leaves or the page dives. */
+        if (magnetGain > 0) {
+          const dx = pointerWorld.x - (bases[i].x + off[i3]);
+          const dy = pointerWorld.y - (bases[i].y + off[i3 + 1]);
+          const pd = Math.sqrt(dx * dx + dy * dy);
+          if (pd < magnetRadius && pd > 0.0001) {
+            let pull = ((magnetRadius - pd) / magnetRadius) * magnetPull;
+            if (i === leadNode.current) pull += leadPull;
+            pull *= magnetGain * dt;
+            vel[i3] += (dx / pd) * pull;
+            vel[i3 + 1] += (dy / pd) * pull;
+          }
         }
         for (let a = 0; a < 3; a++) {
           vel[i3 + a] += (-off[i3 + a] * 5 - vel[i3 + a] * 2.4) * dt;
           off[i3 + a] += vel[i3 + a] * dt;
         }
+        /* clamp the gather so a held cursor can't reel a node in unboundedly */
+        off[i3] = THREE.MathUtils.clamp(off[i3], -gatherMax, gatherMax);
+        off[i3 + 1] = THREE.MathUtils.clamp(off[i3 + 1], -gatherMax, gatherMax);
       }
       const idle = Math.sin(t * 0.5 + phases[i]) * 0.1;
       const x = bases[i].x + off[i3];
@@ -312,7 +369,13 @@ export default function ClusterScene({ dim = false }: { dim?: boolean }) {
       const z = bases[i].z + off[i3 + 2];
 
       const targetScale =
-        hov === i ? 2.1 : hovNeighbors && hovNeighbors.includes(i) ? 1.45 : 1;
+        hov === i
+          ? 2.1
+          : i === leadNode.current
+            ? 1.7 // the magnet "lead" swells so the snap reads as deliberate
+            : hovNeighbors && hovNeighbors.includes(i)
+              ? 1.45
+              : 1;
       hoverScale[i] += (targetScale - hoverScale[i]) * 0.15;
 
       /* beacon shell: nodes near the expanding ping radius flare, fading as

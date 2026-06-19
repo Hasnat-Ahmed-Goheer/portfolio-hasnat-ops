@@ -64,6 +64,12 @@ export const sceneParams = {
        to pingExtent. Tuned so it dissipates (~2.7s) before re-arming (3.2s) —
        a deliberate "ping … rest … ping", not a constant churn. */
     pingPeriod: 3.2, pingSpeed: 4.5, pingExtent: 12,
+    /* cursor magnetism: nodes within magnetRadius are drawn toward the pointer
+       (a gravity well), the nearest "lead" node pulled hardest so the hive
+       visibly reaches for the cursor and forms a transient constellation. The
+       per-node spring (offSpring) resists, so they gather without collapsing
+       and snap back on leave; gatherMax clamps the offset as a safety net. */
+    magnetRadius: 2.9, magnetPull: 5.2, leadPull: 2.1, gatherMax: 2.2,
   },
   latent: { points: 36000, mobilePoints: 12000, clusters: 5 },
   pipeline: { tubes: 5, packetsPerTube: 5, seed: 11, dimSeed: 23 },
