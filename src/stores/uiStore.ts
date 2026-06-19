@@ -14,11 +14,15 @@ interface UiState {
   /** true once the WebGL scene has actually rendered its first frames —
       gates the canvas fade-in and lets BootSequence reveal a warm scene */
   sceneReady: boolean;
+  /** a touch long-press is dragging a cluster node — LayoutShell pauses Lenis
+      smooth-scroll while true so the drag doesn't fight the page scroll */
+  dragLock: boolean;
   setTheme: (t: string) => boolean;
   setGpuTier: (t: GpuTier) => void;
   setReducedMotion: (v: boolean) => void;
   setBooted: (v: boolean) => void;
   setSceneReady: (v: boolean) => void;
+  setDragLock: (v: boolean) => void;
 }
 
 export const useUiStore = create<UiState>((set) => ({
@@ -27,6 +31,7 @@ export const useUiStore = create<UiState>((set) => ({
   reducedMotion: false,
   booted: false,
   sceneReady: false,
+  dragLock: false,
   setTheme: (t) => {
     if (!(t in themes)) return false;
     const name = t as ThemeName;
@@ -38,4 +43,5 @@ export const useUiStore = create<UiState>((set) => ({
   setReducedMotion: (reducedMotion) => set({ reducedMotion }),
   setBooted: (booted) => set({ booted }),
   setSceneReady: (sceneReady) => set({ sceneReady }),
+  setDragLock: (dragLock) => set({ dragLock }),
 }));

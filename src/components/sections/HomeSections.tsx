@@ -15,6 +15,7 @@ import { useUiStore } from "@/stores/uiStore";
 import Reveal from "@/components/ui/Reveal";
 import DecodeText from "@/components/ui/DecodeText";
 import Magnetic from "@/components/ui/Magnetic";
+import ClusterTouchControl from "@/scenes/cluster/ClusterTouchControl";
 
 const STATEMENTS = [
   {
@@ -199,6 +200,9 @@ export default function HomeSections() {
 
   return (
     <>
+      {/* touch: long-press-to-grab driver for dragging the cluster (home only,
+          coarse pointers) — desktop uses cursor magnetism instead */}
+      <ClusterTouchControl />
       {/* beat 2 — hero over the cluster */}
       <section
         ref={heroRef}

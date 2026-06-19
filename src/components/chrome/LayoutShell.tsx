@@ -98,6 +98,17 @@ export default function LayoutShell({ children }: { children: ReactNode }) {
     return () => window.removeEventListener("keydown", onKey);
   }, [setOpen]);
 
+  /* touch cluster-drag: pause Lenis while a node is being long-press dragged so
+     the drag owns the gesture instead of fighting smooth-scroll (native scroll
+     is additionally suppressed via preventDefault in ClusterTouchControl) */
+  const dragLock = useUiStore((s) => s.dragLock);
+  useEffect(() => {
+    const lenis = lenisRef.current?.lenis;
+    if (!lenis) return;
+    if (dragLock) lenis.stop();
+    else lenis.start();
+  }, [dragLock]);
+
   /* route change: scroll to top, re-measure triggers */
   useEffect(() => {
     lenisRef.current?.lenis?.scrollTo(0, { immediate: true });

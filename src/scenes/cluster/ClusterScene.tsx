@@ -13,6 +13,7 @@ import { useFrame, type ThreeEvent } from "@react-three/fiber";
 import { cameraRig, sceneParams } from "@/config/console";
 import { applyCameraRig } from "../shared/cameraRig";
 import { pointerToPlane } from "../shared/pointerPlane";
+import { clusterTouch } from "./clusterTouch";
 import { themes } from "@/config/theme";
 import { useSceneStore } from "@/stores/sceneStore";
 import { useUiStore } from "@/stores/uiStore";
@@ -52,6 +53,9 @@ export default function ClusterScene({ dim = false }: { dim?: boolean }) {
   const hovered = useRef(-1);
   const lastHover = useRef(-1);
   const dragId = useRef(-1);
+  /* true while the current drag was initiated by a touch long-press (vs mouse),
+     so the frame loop reads the finger position and releases on touch-end */
+  const touchDragging = useRef(false);
   const lastDisturb = useRef(0);
   /* pending click shockwave origin (-1 = none), consumed in useFrame */
   const shockId = useRef(-1);
@@ -305,10 +309,47 @@ export default function ClusterScene({ dim = false }: { dim?: boolean }) {
       leadNode.current = -1;
     }
 
-    /* drag target point (plane at dragged node's depth) */
+    /* touch long-press drag (mobile): acquire the nearest node to the finger
+       when a press arms, and release it (carrying fling velocity) when the
+       finger lifts. Mouse uses R3F onPointerDown/up; touch is driven here off
+       the clusterTouch bridge because the canvas takes no touch events. */
+    if (clusterTouch.active && !touchDragging.current && dragId.current < 0) {
+      pointerToPlane(clusterTouch, cam, 0, tmp);
+      let best = -1;
+      let bestD = Infinity;
+      for (let i = 0; i < count; i++) {
+        if (i >= liveCount) continue;
+        const dx = tmp.x - (bases[i].x + off[i * 3]);
+        const dy = tmp.y - (bases[i].y + off[i * 3 + 1]);
+        const d2 = dx * dx + dy * dy;
+        if (d2 < bestD) {
+          bestD = d2;
+          best = i;
+        }
+      }
+      if (best >= 0) {
+        dragId.current = best;
+        touchDragging.current = true;
+        dragging.current = false; // first frame seeds drag velocity
+      }
+    } else if (!clusterTouch.active && touchDragging.current) {
+      const i = dragId.current;
+      if (i >= 0) {
+        const i3 = i * 3;
+        vel[i3] += THREE.MathUtils.clamp(dragVel[0], -16, 16);
+        vel[i3 + 1] += THREE.MathUtils.clamp(dragVel[1], -16, 16);
+      }
+      dragId.current = -1;
+      touchDragging.current = false;
+      dragging.current = false;
+    }
+
+    /* drag target point (plane at dragged node's depth) — finger when touch-
+       dragging, else the mouse pointer */
     let dragPoint: THREE.Vector3 | null = null;
     if (dragId.current >= 0) {
-      dragPoint = pointerToPlane(state.pointer, cam, bases[dragId.current].z, dragVec);
+      const src = touchDragging.current ? clusterTouch : state.pointer;
+      dragPoint = pointerToPlane(src, cam, bases[dragId.current].z, dragVec);
       /* drag-point velocity (world units/sec) for fling-on-release */
       if (dragging.current && dt > 0) {
         const inv = 1 / dt;
