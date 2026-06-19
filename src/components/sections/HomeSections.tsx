@@ -52,13 +52,15 @@ const SUBSYSTEMS = [
 
 function Counter({ value, prefix = "", suffix = "" }: { value: number; prefix?: string; suffix?: string }) {
   const ref = useRef<HTMLSpanElement>(null);
-  /* Count-up is driven by IntersectionObserver, NOT ScrollTrigger: this
-     section sits below a pinned scrub whose pin-spacer shifts its real Y by
-     220vh, and a ScrollTrigger start computed against stale layout could be
-     missed on refresh — leaving the span stuck at its literal "0+" initial
-     text (a credibility-killer right under "years in production"). The IO
-     fires on actual intersection regardless of layout math, and a final
-     settle always lands the true value even if the tween is interrupted. */
+  /* The resting text is the REAL value (SSR + no-JS + reduced-motion all show
+     "2+ years" / "sub-200ms", never the old "0+ years" / "sub-0ms" that read
+     as broken data in the fetched DOM — a credibility-killer an Awwwards judge
+     spots instantly). The count-up is a pure enhancement: on first scroll-into-
+     view we briefly seed 0 and tween up to the real value, then settle exactly.
+     Driven by IntersectionObserver, NOT ScrollTrigger — this band sits below a
+     pinned scrub whose pin-spacer shifts its Y by 220vh, so a ScrollTrigger
+     start computed against stale layout could be missed on refresh; IO fires on
+     real intersection regardless of layout math. */
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
@@ -93,7 +95,7 @@ function Counter({ value, prefix = "", suffix = "" }: { value: number; prefix?: 
       tween?.kill();
     };
   }, [value, prefix, suffix]);
-  return <span ref={ref}>{`${prefix}0${suffix}`}</span>;
+  return <span ref={ref}>{`${prefix}${value}${suffix}`}</span>;
 }
 
 export default function HomeSections() {
