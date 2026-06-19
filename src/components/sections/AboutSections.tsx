@@ -171,7 +171,7 @@ export default function AboutSections() {
             />
           </p>
           <h1 className="max-w-3xl text-4xl font-medium leading-[1.06] tracking-tight sm:text-6xl">
-            The engineer behind the console.
+            <DecodeText text="The engineer behind the console." />
           </h1>
         </div>
       </section>

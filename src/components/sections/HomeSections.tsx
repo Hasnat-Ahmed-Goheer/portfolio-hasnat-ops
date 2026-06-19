@@ -228,7 +228,7 @@ export default function HomeSections() {
             data-hero
             className="max-w-4xl text-5xl font-medium leading-[1.04] tracking-tight sm:text-7xl"
           >
-            {profile.name}
+            <DecodeText text={profile.name} />
           </h1>
           {/* shortBio already opens with the role, so don't prepend it again
               (it read "Full Stack Software Engineer — Full Stack Software

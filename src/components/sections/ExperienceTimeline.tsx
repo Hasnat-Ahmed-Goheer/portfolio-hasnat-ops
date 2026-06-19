@@ -53,7 +53,7 @@ export default function ExperienceTimeline() {
             />
           </p>
           <h1 className="text-4xl font-medium tracking-tight sm:text-6xl">
-            Event log
+            <DecodeText text="Event log" />
           </h1>
           <p className="mt-4 font-mono text-xs text-muted">
             {experience.length} entries · 2023 → HEAD · uptime 2+ years

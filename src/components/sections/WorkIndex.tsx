@@ -38,7 +38,7 @@ export default function WorkIndex() {
             />
           </p>
           <h1 className="text-4xl font-medium tracking-tight sm:text-6xl">
-            Deployments
+            <DecodeText text="Deployments" />
           </h1>
           <p className="mt-4 font-mono text-xs text-muted">
             {projects.length} services registered ·{" "}

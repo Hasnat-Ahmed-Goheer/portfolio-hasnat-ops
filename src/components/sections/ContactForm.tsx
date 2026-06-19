@@ -53,7 +53,7 @@ export default function ContactForm() {
             />
           </p>
           <h1 className="text-4xl font-medium tracking-tight sm:text-6xl">
-            Open a connection
+            <DecodeText text="Open a connection" />
           </h1>
           <p className="mt-4 font-mono text-xs text-muted">
             <span className="text-ok">●</span> {profile.availability} · response

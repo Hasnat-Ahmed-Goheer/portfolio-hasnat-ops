@@ -59,7 +59,7 @@ export default function LabSections() {
             />
           </p>
           <h1 className="text-4xl font-medium tracking-tight sm:text-6xl">
-            Sandbox
+            <DecodeText text="Sandbox" />
           </h1>
           <p className="mt-4 max-w-xl text-muted">
             Live experiments you can actually drive. The field behind this page
