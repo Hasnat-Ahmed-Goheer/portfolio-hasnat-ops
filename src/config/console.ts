@@ -31,6 +31,25 @@ export const bootLines = [
   "starting console …",
 ];
 
+/** Live hero "session" — a scripted, auto-typing terminal that idles in the
+    hero so the landing reads as a running system, not styled text. Display only
+    (the real shell is `~`); each command types out, then its lines stream in. */
+export const heroSession: { cmd: string; out: string[] }[] = [
+  { cmd: "whoami", out: ["hasnat — full-stack · cloud-native · ai"] },
+  {
+    cmd: "kubectl get pods",
+    out: [
+      "nextjs     Running   2y",
+      "fastapi    Running   1y",
+      "pinecone   Running   8mo",
+    ],
+  },
+  {
+    cmd: "uptime",
+    out: ["99.9% uptime · sub-200ms p95 · 15+ envs"],
+  },
+];
+
 /** Per-scene tunables (counts auto-reduced on low-power devices). */
 /* Shared shockwave decay rate (per second, used as exp(-SHOCK_DECAY * dt)).
    Every scene's terminal-egg / disturb ripple settles at the same cadence so

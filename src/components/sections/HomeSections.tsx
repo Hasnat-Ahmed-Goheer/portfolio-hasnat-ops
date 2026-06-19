@@ -16,6 +16,7 @@ import Reveal from "@/components/ui/Reveal";
 import DecodeText from "@/components/ui/DecodeText";
 import Magnetic from "@/components/ui/Magnetic";
 import ClusterTouchControl from "@/scenes/cluster/ClusterTouchControl";
+import HeroTerminal from "@/components/sections/HeroTerminal";
 
 const STATEMENTS = [
   {
@@ -209,6 +210,14 @@ export default function HomeSections() {
         className="scene-passthrough relative flex min-h-[100svh] flex-col justify-end px-5 pb-20"
         aria-label="Intro"
       >
+        {/* live system HUD — floats over the hive's upper-right empty space on
+            desktop so the landing reads as a running console, not just copy */}
+        <div
+          data-hero
+          className="pointer-events-none absolute right-8 top-32 hidden xl:block"
+        >
+          <HeroTerminal />
+        </div>
         <div className="mx-auto w-full max-w-6xl">
           <p data-hero className="sys-label mb-4">
             <DecodeText
