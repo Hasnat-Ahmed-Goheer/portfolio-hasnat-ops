@@ -74,13 +74,20 @@ export default function RootLayout({
         />
         {/* first-paint shield (see #boot-cover in globals.css): present in the
             SSR HTML so frame 0 is dark, never the bare page */}
-        <div id="boot-cover" aria-hidden="true" />
+        {/* suppressHydrationWarning: the inline script below hides this node
+            pre-hydration for returning/reduced-motion visitors. Hiding (not
+            removing) keeps the DOM structure identical to the SSR HTML so React
+            hydrates cleanly; this flag tolerates the added style attribute. */}
+        <div id="boot-cover" aria-hidden="true" suppressHydrationWarning />
         {/* runs before paint: returning-in-session or reduced-motion visitors
-            skip the boot, so drop the shield immediately for instant content */}
+            skip the boot, so hide the shield immediately for instant content.
+            display:none rather than remove() — removing the node before React
+            hydrates desynced the server/client tree (recoverable hydration
+            error); BootSequence removes it for real post-hydration. */}
         <script
           dangerouslySetInnerHTML={{
             __html:
-              "try{if(sessionStorage.getItem('ops-booted')==='1'||matchMedia('(prefers-reduced-motion: reduce)').matches){var c=document.getElementById('boot-cover');if(c)c.remove();}}catch(e){}",
+              "try{if(sessionStorage.getItem('ops-booted')==='1'||matchMedia('(prefers-reduced-motion: reduce)').matches){var c=document.getElementById('boot-cover');if(c)c.style.display='none';}}catch(e){}",
           }}
         />
         <LayoutShell>{children}</LayoutShell>

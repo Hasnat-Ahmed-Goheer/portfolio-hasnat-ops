@@ -215,8 +215,12 @@ export default function HomeSections() {
           >
             {profile.name}
           </h1>
+          {/* shortBio already opens with the role, so don't prepend it again
+              (it read "Full Stack Software Engineer — Full Stack Software
+              Engineer with 2+ years…"). The role-prefixed form is reserved for
+              places that show the bio without the H1 name above it. */}
           <p data-hero className="mt-4 max-w-2xl text-lg text-muted sm:text-xl">
-            {profile.role} — {profile.shortBio}
+            {profile.shortBio}
           </p>
           <div
             data-hero

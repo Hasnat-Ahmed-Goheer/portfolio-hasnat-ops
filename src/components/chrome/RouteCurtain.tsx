@@ -19,7 +19,7 @@
  */
 import { useRef } from "react";
 import { usePathname } from "next/navigation";
-import { gsap, ScrollTrigger, useGSAP } from "@/lib/motion";
+import { gsap, useGSAP } from "@/lib/motion";
 import { lexicon } from "@/config/console";
 import { useUiStore } from "@/stores/uiStore";
 
@@ -58,7 +58,12 @@ export default function RouteCurtain() {
         ease: "power3.inOut",
         onComplete: () => {
           gsap.set(el, { display: "none", clearProps: "transform,opacity" });
-          ScrollTrigger.refresh();
+          /* NOTE: no ScrollTrigger.refresh() here. LayoutShell is the single
+             refresh owner per nav (it re-measures ~120ms after the pathname
+             change, the documented mechanism — CLAUDE.md pitfall #3). The
+             curtain is a fixed sibling and clearProps only touches the curtain
+             itself, so it never changes pinned-section layout — a second
+             refresh here was redundant and could re-pin mid-reveal. */
         },
       });
     },

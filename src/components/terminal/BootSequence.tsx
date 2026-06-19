@@ -98,7 +98,11 @@ export default function BootSequence() {
   return (
     <div
       aria-hidden="true"
-      className={`fixed inset-0 z-[60] flex items-center justify-center bg-bg transition-opacity duration-500 ${
+      /* z-[61]: one above the RouteCurtain (z-[60]) so that if a navigation
+         fires during the boot panel's 550ms fade-out, the panel stays on top of
+         the curtain instead of z-fighting it (equal z = paint-order coin-flip =
+         a visible double-cover flicker on the first nav). */
+      className={`fixed inset-0 z-[61] flex items-center justify-center bg-bg transition-opacity duration-500 ${
         fading ? "opacity-0" : "opacity-100"
       }`}
     >
