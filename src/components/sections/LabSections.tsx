@@ -15,6 +15,7 @@ import { useLabStore } from "@/stores/labStore";
 import Terminal from "@/components/terminal/Terminal";
 import Reveal from "@/components/ui/Reveal";
 import DecodeText from "@/components/ui/DecodeText";
+import ScrollDecodeText from "@/components/ui/ScrollDecodeText";
 import LatentControls from "@/components/sections/lab/LatentControls";
 import ClusterControls from "@/components/sections/lab/ClusterControls";
 import SchedulerToy from "@/components/sections/lab/SchedulerToy";
@@ -129,7 +130,9 @@ export default function LabSections() {
       <section className="relative px-5 py-16" aria-label="Inline terminal">
         <div className="mx-auto max-w-6xl">
           <Reveal>
-            <p className="sys-label mb-2">live shell</p>
+            <p className="sys-label mb-2">
+              <ScrollDecodeText text="live shell" />
+            </p>
             <p className="mb-6 font-mono text-xs text-muted">
               hint: try <span className="text-accent">ls -a</span> — discoveries
               unlock below ({found}/{EGGS.length})

@@ -11,6 +11,7 @@ import { projects } from "@/content/projects";
 import type { Project } from "@/content/types";
 import { useSceneStore } from "@/stores/sceneStore";
 import Reveal from "@/components/ui/Reveal";
+import ScrollDecodeText from "@/components/ui/ScrollDecodeText";
 
 export default function CaseStudy({ project }: { project: Project }) {
   const setMotif = useSceneStore((s) => s.setMotif);
@@ -80,7 +81,9 @@ export default function CaseStudy({ project }: { project: Project }) {
       <section className="relative border-t hairline px-5 py-24" aria-label="Problem">
         <div className="mx-auto max-w-6xl">
           <Reveal>
-            <p className="sys-label mb-6">problem</p>
+            <p className="sys-label mb-6">
+              <ScrollDecodeText text="problem" />
+            </p>
             <p className="max-w-3xl text-2xl font-medium leading-snug tracking-tight sm:text-4xl">
               {project.problem}
             </p>
@@ -151,7 +154,9 @@ export default function CaseStudy({ project }: { project: Project }) {
       <section className="relative px-5 py-24" aria-label="Outcome">
         <div className="mx-auto max-w-6xl">
           <Reveal>
-            <p className="sys-label mb-8">outcome</p>
+            <p className="sys-label mb-8">
+              <ScrollDecodeText text="outcome" />
+            </p>
           </Reveal>
           <div className="max-w-3xl space-y-4">
             {project.outcomes.map((o, i) => (

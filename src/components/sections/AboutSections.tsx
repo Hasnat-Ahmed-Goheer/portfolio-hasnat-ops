@@ -20,6 +20,7 @@ import { clusterAccent } from "@/lib/color";
 import { projectsForSkill } from "@/lib/skillMatch";
 import Reveal from "@/components/ui/Reveal";
 import DecodeText from "@/components/ui/DecodeText";
+import ScrollDecodeText from "@/components/ui/ScrollDecodeText";
 
 /** scannable impact ledger — numbers a hiring manager skims (from the resume) */
 const METRICS = [
@@ -462,7 +463,9 @@ export default function AboutSections() {
       <section className="relative border-t hairline px-5 py-28" aria-label="Values">
         <div className="mx-auto max-w-6xl">
           <Reveal>
-            <p className="sys-label mb-10">operating principles</p>
+            <p className="sys-label mb-10">
+              <ScrollDecodeText text="operating principles" />
+            </p>
           </Reveal>
           <div className="grid gap-4 md:grid-cols-3">
             {VALUES.map((v, i) => (
@@ -519,7 +522,9 @@ export default function AboutSections() {
       <section className="relative border-t hairline px-5 py-16" aria-label="Education">
         <div className="mx-auto max-w-6xl">
           <Reveal>
-            <p className="sys-label mb-6">education</p>
+            <p className="sys-label mb-6">
+              <ScrollDecodeText text="education" />
+            </p>
             <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
               <div>
                 <p className="text-lg font-medium">{profile.education.institution}</p>

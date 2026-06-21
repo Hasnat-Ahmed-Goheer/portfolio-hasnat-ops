@@ -14,6 +14,9 @@ import { useSceneStore } from "@/stores/sceneStore";
 import { useUiStore } from "@/stores/uiStore";
 import Reveal from "@/components/ui/Reveal";
 import DecodeText from "@/components/ui/DecodeText";
+import KineticName from "@/components/ui/KineticName";
+import DecryptLens from "@/components/ui/DecryptLens";
+import ScrollDecodeText from "@/components/ui/ScrollDecodeText";
 import Magnetic from "@/components/ui/Magnetic";
 import ClusterTouchControl from "@/scenes/cluster/ClusterTouchControl";
 import HeroTerminal from "@/components/sections/HeroTerminal";
@@ -228,14 +231,14 @@ export default function HomeSections() {
             data-hero
             className="max-w-4xl text-5xl font-medium leading-[1.04] tracking-tight sm:text-7xl"
           >
-            <DecodeText text={profile.name} />
+            <KineticName text={profile.name} />
           </h1>
           {/* shortBio already opens with the role, so don't prepend it again
               (it read "Full Stack Software Engineer — Full Stack Software
               Engineer with 2+ years…"). The role-prefixed form is reserved for
               places that show the bio without the H1 name above it. */}
           <p data-hero className="mt-4 max-w-2xl text-lg text-muted sm:text-xl">
-            {profile.shortBio}
+            <DecryptLens text={profile.shortBio} />
           </p>
           <div
             data-hero
@@ -345,7 +348,9 @@ export default function HomeSections() {
       <section className="relative px-5 py-28" aria-label="Subsystems">
         <div className="mx-auto max-w-6xl">
           <Reveal>
-            <p className="sys-label mb-10">select subsystem ▸</p>
+            <p className="sys-label mb-10">
+              <ScrollDecodeText text="select subsystem ▸" />
+            </p>
           </Reveal>
           <div className="grid gap-4 md:grid-cols-3">
             {SUBSYSTEMS.map((s, i) => (

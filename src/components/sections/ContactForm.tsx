@@ -9,6 +9,7 @@ import { lexicon } from "@/config/console";
 import { profile } from "@/content/profile";
 import Reveal from "@/components/ui/Reveal";
 import DecodeText from "@/components/ui/DecodeText";
+import ScrollDecodeText from "@/components/ui/ScrollDecodeText";
 import Magnetic from "@/components/ui/Magnetic";
 
 type Status = "idle" | "sending" | "ok" | "err";
@@ -112,7 +113,9 @@ export default function ContactForm() {
 
           <Reveal delay={0.1}>
             <div className="space-y-4 font-mono text-xs">
-              <p className="sys-label">direct channels</p>
+              <p className="sys-label">
+                <ScrollDecodeText text="direct channels" />
+              </p>
               <a href={`mailto:${profile.email}`} className="block text-text/85 hover:text-accent">
                 {profile.email}
               </a>
