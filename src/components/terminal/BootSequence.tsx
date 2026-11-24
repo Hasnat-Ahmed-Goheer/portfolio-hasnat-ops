@@ -59,11 +59,13 @@ export default function BootSequence() {
   };
   useEffect(() => () => clearTimeout(fadeTimer.current), []);
 
-  /* typed line cadence */
+  /* typed line cadence: ~1.6s end to end. The page cannot paint its hero
+     (the LCP element) until this lifts, so every 100ms here is 100ms of LCP
+     for first-time visitors (was 230ms/line, ~2.3s, LCP 2.9s on mobile). */
   useEffect(() => {
     if (!mounted || skipBoot) return;
     if (count >= bootLines.length) return; // typed out; reveal handled below
-    const t = setTimeout(() => setCount((c) => c + 1), count === 0 ? 350 : 230);
+    const t = setTimeout(() => setCount((c) => c + 1), count === 0 ? 250 : 160);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mounted, skipBoot, count]);
@@ -75,7 +77,7 @@ export default function BootSequence() {
   const linesDone = count >= bootLines.length;
   useEffect(() => {
     if (!mounted || skipBoot || !linesDone || !sceneReady) return;
-    const t = setTimeout(finish, 300);
+    const t = setTimeout(finish, 200);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mounted, skipBoot, linesDone, sceneReady]);

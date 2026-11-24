@@ -190,7 +190,7 @@ export default function AboutSections() {
           <div className="mt-10 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {METRICS.map((m, i) => (
               <Reveal key={m.value} delay={i * 0.06}>
-                <div className="h-full rounded-lg border hairline bg-elev/50 p-6">
+                <div className="h-full rounded-lg border hairline bg-elev/85 p-6 backdrop-blur-sm">
                   <p className="font-mono text-3xl font-medium text-accent">
                     {m.value}
                   </p>
@@ -408,7 +408,7 @@ export default function AboutSections() {
                   so no aria-live here — a scroll-scanned region would spam SRs */}
               <div
                 key={currentId}
-                className="skill-panel-in rounded-lg border hairline bg-elev/40 p-6"
+                className="skill-panel-in rounded-lg border hairline bg-elev/85 p-6 backdrop-blur-sm"
               >
                 <p className="font-mono text-xs">
                   <span style={{ color: hueOf(currentIdx) }}>
@@ -423,7 +423,7 @@ export default function AboutSections() {
                   <DecodeText text={activeGroup.label} />
                 </h3>
                 {activeGroup.philosophy && (
-                  <p className="mt-3 border-l-2 border-accent/30 pl-3 font-mono text-sm italic text-muted/80">
+                  <p className="mt-3 border-l-2 border-accent/30 pl-3 font-mono text-sm italic text-muted">
                     &ldquo;{activeGroup.philosophy}&rdquo;
                   </p>
                 )}
@@ -470,7 +470,7 @@ export default function AboutSections() {
           <div className="grid gap-4 md:grid-cols-3">
             {VALUES.map((v, i) => (
               <Reveal key={v.title} delay={i * 0.08}>
-                <div className="h-full rounded-lg border hairline bg-elev/50 p-8">
+                <div className="h-full rounded-lg border hairline bg-elev/85 p-8 backdrop-blur-sm">
                   <p className="font-mono text-xs text-accent">0{i + 1}</p>
                   <h3 className="mt-3 text-xl font-medium tracking-tight">
                     {v.title}

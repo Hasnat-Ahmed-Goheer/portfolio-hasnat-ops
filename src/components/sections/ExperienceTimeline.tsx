@@ -90,7 +90,7 @@ export default function ExperienceTimeline() {
                       right ? "md:ml-[calc(50%+2.5rem)]" : ""
                     }`}
                   >
-                    <div className="rounded-lg border hairline bg-elev/50 p-6">
+                    <div className="rounded-lg border hairline bg-elev/85 p-6 backdrop-blur-sm">
                       <p className="font-mono text-xs text-muted">
                         {fmt(e.start)} → {fmt(e.end)}
                         {e.end === "present" && (

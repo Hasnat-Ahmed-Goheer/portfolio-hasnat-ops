@@ -28,6 +28,7 @@ import CommandPalette from "./CommandPalette";
 import TourOverlay from "./TourOverlay";
 import BootSequence from "../terminal/BootSequence";
 import Terminal from "../terminal/Terminal";
+import StaticBackdrop from "@/scenes/StaticBackdrop";
 
 const CanvasRoot = dynamic(() => import("@/scenes/CanvasRoot"), { ssr: false });
 
@@ -36,6 +37,8 @@ export default function LayoutShell({ children }: { children: ReactNode }) {
   const reducedMotion = useUiStore((s) => s.reducedMotion);
   const setOpen = useTerminalStore((s) => s.setOpen);
   const booted = useUiStore((s) => s.booted);
+  const gpuTier = useUiStore((s) => s.gpuTier);
+  const gpuDetected = useUiStore((s) => s.gpuDetected);
   const pathname = usePathname();
   const lenisRef = useRef<LenisRef>(null);
   const bootChimed = useRef(false);
@@ -126,7 +129,10 @@ export default function LayoutShell({ children }: { children: ReactNode }) {
         skip to content
       </a>
       <BootSequence />
-      <CanvasRoot />
+      {/* mount the WebGL canvas only once the tier is known: "off" (reduced
+          motion, no WebGL, software rendering) gets the CSS backdrop and never
+          downloads the three.js chunks */}
+      {gpuDetected && (gpuTier === "off" ? <StaticBackdrop /> : <CanvasRoot />)}
       <SceneScrim />
       <Nav />
       <ScrollProgress />

@@ -9,6 +9,9 @@ interface UiState {
   theme: ThemeName;
   /** WebGL capability tier — "off" renders DOM-only fallbacks */
   gpuTier: GpuTier;
+  /** false until useCapabilities has run detection on the client. The canvas
+      waits for it, so a tier that resolves to "off" never downloads three.js */
+  gpuDetected: boolean;
   reducedMotion: boolean;
   booted: boolean;
   /** true once the WebGL scene has actually rendered its first frames —
@@ -33,6 +36,7 @@ interface UiState {
 export const useUiStore = create<UiState>((set) => ({
   theme: DEFAULT_THEME,
   gpuTier: "full",
+  gpuDetected: false,
   reducedMotion: false,
   booted: false,
   sceneReady: false,
@@ -45,7 +49,7 @@ export const useUiStore = create<UiState>((set) => ({
     set({ theme: name });
     return true;
   },
-  setGpuTier: (gpuTier) => set({ gpuTier }),
+  setGpuTier: (gpuTier) => set({ gpuTier, gpuDetected: true }),
   setReducedMotion: (reducedMotion) => set({ reducedMotion }),
   setBooted: (booted) => set({ booted }),
   setSceneReady: (sceneReady) => set({ sceneReady }),

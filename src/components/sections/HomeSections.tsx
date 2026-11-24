@@ -360,7 +360,7 @@ export default function HomeSections() {
                   <Link
                     href={s.href}
                     data-cursor="enter →"
-                    className="subsystem-card group block overflow-hidden rounded-lg border hairline bg-elev/50 p-10 transition-colors duration-300 hover:border-accent/40 focus-visible:border-accent/50"
+                    className="subsystem-card group block overflow-hidden rounded-lg border hairline bg-elev/85 p-10 backdrop-blur-sm transition-colors duration-300 hover:border-accent/40 focus-visible:border-accent/50"
                   >
                     <div className="flex items-center gap-2 font-mono text-[11px] text-muted">
                       <span

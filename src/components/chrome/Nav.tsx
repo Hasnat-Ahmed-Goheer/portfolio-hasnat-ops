@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { lexicon } from "@/config/console";
@@ -19,6 +20,8 @@ const links = [
 
 /* warm the lazy 3D chunk for the page the user is about to visit */
 function prefetchScene(href: string) {
+  /* no canvas on the "off" tier, so nothing to warm */
+  if (useUiStore.getState().gpuTier === "off") return;
   if (href === "/about" || href === "/lab")
     void import("@/scenes/latent/LatentScene");
   else if (href === "/work" || href === "/experience")
@@ -30,11 +33,39 @@ export default function Nav() {
   const pathname = usePathname();
   const togglePalette = useConsoleStore((s) => s.togglePalette);
   const booted = useUiStore((s) => s.booted);
+  const [scrolled, setScrolled] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  /* frosted bar once the page scrolls: without it, headings and cards
+     scrolled straight under the logo and links (no background at all) */
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 8);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  /* close the mobile menu on navigation and on Escape */
+  useEffect(() => setMenuOpen(false), [pathname]);
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setMenuOpen(false);
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [menuOpen]);
+
+  const isActive = (href: string) =>
+    href === "/" ? pathname === "/" : pathname.startsWith(href);
+  const solid = scrolled || menuOpen;
 
   return (
     <header
-      className={`fixed inset-x-0 top-0 z-40 transition-opacity duration-700 motion-reduce:transition-none ${
+      className={`fixed inset-x-0 top-0 z-40 border-b transition-[opacity,background-color,border-color] duration-500 motion-reduce:transition-none ${
         booted ? "opacity-100" : "opacity-0"
+      } ${
+        solid
+          ? "border-[color:var(--line)] bg-bg/75 backdrop-blur-md"
+          : "border-transparent"
       }`}
     >
       <nav
@@ -49,10 +80,10 @@ export default function Nav() {
           </span>
         </Link>
 
-        <div className="ml-auto flex items-center gap-1 overflow-x-auto">
+        {/* desktop / tablet: inline links */}
+        <div className="ml-auto hidden items-center gap-1 sm:flex">
           {links.map((l) => {
-            const active =
-              l.href === "/" ? pathname === "/" : pathname.startsWith(l.href);
+            const active = isActive(l.href);
             return (
               <Link
                 key={l.href}
@@ -82,7 +113,57 @@ export default function Nav() {
             <span className="text-accent">⌘K</span> command
           </button>
         </div>
+
+        {/* phone: the six links did not fit ("experience" was cut in half
+            and the rest hid behind a sideways scroll), so they fold into a
+            menu */}
+        <button
+          type="button"
+          onClick={() => {
+            soundClick();
+            setMenuOpen((o) => !o);
+          }}
+          aria-expanded={menuOpen}
+          aria-controls="mobile-nav"
+          className="ml-auto flex items-center gap-2 rounded border hairline px-3 py-1.5 text-muted transition-colors hover:text-text sm:hidden"
+        >
+          <span className="text-accent">
+            {links.find((l) => isActive(l.href))?.label ?? "menu"}
+          </span>
+          <span aria-hidden="true">{menuOpen ? "×" : "≡"}</span>
+          <span className="sr-only">{menuOpen ? "Close menu" : "Open menu"}</span>
+        </button>
       </nav>
+
+      {menuOpen && (
+        <div
+          id="mobile-nav"
+          className="border-t hairline px-5 pb-5 pt-2 font-mono text-sm sm:hidden"
+        >
+          <ul className="flex flex-col">
+            {links.map((l, i) => {
+              const active = isActive(l.href);
+              return (
+                <li key={l.href}>
+                  <Link
+                    href={l.href}
+                    onClick={() => soundClick()}
+                    aria-current={active ? "page" : undefined}
+                    className={`flex items-baseline gap-3 border-b hairline py-3 ${
+                      active ? "text-accent" : "text-text/85"
+                    }`}
+                  >
+                    <span className="text-[10px] text-muted">
+                      {String(i + 1).padStart(2, "0")}
+                    </span>
+                    {active ? `[${l.label}]` : l.label}
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
     </header>
   );
 }

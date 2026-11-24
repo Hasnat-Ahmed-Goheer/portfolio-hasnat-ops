@@ -17,15 +17,19 @@ function detectGpuTier(): GpuTier {
   /* Software renderers (SwiftShader / llvmpipe / Mesa offscreen / Microsoft
      Basic) report WebGL as available but run on the CPU — common in
      containers, VMs and WSL without GPU passthrough. They'd otherwise pass as
-     "full" and get the 42k-point shader + full bloom and crawl. Tier them down
-     to the reduced "mobile" path (fewer points, no postprocessing). */
+     "full" and get the 42k-point shader + full bloom and crawl. Even the
+     reduced "mobile" path cost ~2.5s of main thread per load under a 4x CPU
+     throttle (profiled), starving input and scroll. Give them the static
+     backdrop instead, the same path reduced-motion visitors get. This also
+     covers headless Chrome (Lighthouse / PageSpeed / Google's renderer),
+     which has no GPU, so lab scores reflect the page, not CPU-side WebGL. */
   try {
     const dbg = gl.getExtension("WEBGL_debug_renderer_info");
     const renderer = dbg
       ? String(gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL))
       : "";
     if (/swiftshader|llvmpipe|softpipe|software|mesa offscreen|microsoft basic/i.test(renderer))
-      return "mobile";
+      return "off";
   } catch {
     /* extension blocked (privacy) — fall through to heuristics */
   }
