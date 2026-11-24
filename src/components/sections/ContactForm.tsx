@@ -42,7 +42,7 @@ export default function ContactForm() {
   }
 
   const field =
-    "w-full rounded border hairline bg-elev/60 px-4 py-3 font-mono text-sm text-text outline-none transition-colors placeholder:text-muted/40 focus:border-accent/60";
+    "w-full rounded border hairline bg-elev/90 px-4 backdrop-blur-sm py-3 font-mono text-sm text-text outline-none transition-colors placeholder:text-muted/40 focus:border-accent/60";
 
   return (
     <>

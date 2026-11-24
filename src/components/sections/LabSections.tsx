@@ -94,7 +94,7 @@ export default function LabSections() {
             <SchedulerToy />
           </Reveal>
           <Reveal delay={0.21}>
-            <div className="group h-full rounded-lg border hairline bg-elev/50 p-7">
+            <div className="group h-full rounded-lg border hairline bg-elev/85 p-7 backdrop-blur-sm">
               <div className="flex items-baseline justify-between gap-4">
                 <p
                   className="font-mono text-xs"

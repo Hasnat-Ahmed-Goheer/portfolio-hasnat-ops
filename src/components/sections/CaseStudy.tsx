@@ -120,7 +120,7 @@ export default function CaseStudy({ project }: { project: Project }) {
             <Reveal>
               <h2 className="sys-label mb-8">attached media</h2>
             </Reveal>
-            <div className="grid gap-6 md:grid-cols-2">
+            <div className="grid gap-6 md:grid-cols-2 [&>*]:min-w-0">
               {project.media.map((m, i) => (
                 <Reveal key={m.src + i} delay={i * 0.08}>
                   <figure className="group overflow-hidden rounded-lg border hairline bg-elev/60 transition-colors hover:border-accent/40">
@@ -180,7 +180,7 @@ export default function CaseStudy({ project }: { project: Project }) {
           <Reveal>
             <Link
               href={`/work/${next.slug}`}
-              className="group block rounded-lg border hairline bg-elev/50 p-8 transition-colors hover:border-accent/40"
+              className="group block rounded-lg border hairline bg-elev/85 p-8 backdrop-blur-sm transition-colors hover:border-accent/40"
             >
               <p className="font-mono text-xs text-muted">next deployment ▸</p>
               <p className="mt-3 text-3xl font-medium tracking-tight group-hover:text-accent">

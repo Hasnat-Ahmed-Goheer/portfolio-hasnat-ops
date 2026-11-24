@@ -173,7 +173,9 @@ export default function RootLayout({
           }}
         />
         <LayoutShell>{children}</LayoutShell>
-        <SpeedInsights />
+        {/* the /_vercel/speed-insights script only exists on Vercel; elsewhere
+            (Railway, Docker, local) it 404s and logs a console error */}
+        {process.env.VERCEL && <SpeedInsights />}
       </body>
     </html>
   );

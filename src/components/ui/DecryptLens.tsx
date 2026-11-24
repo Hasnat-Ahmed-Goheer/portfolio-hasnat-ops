@@ -127,7 +127,7 @@ export default function DecryptLens({
           key={i}
           data-dl-char
           data-char={ch}
-          style={ch === " " ? { whiteSpace: "pre" } : undefined}
+          style={ch === " " ? { whiteSpace: "pre-wrap" } : undefined}
         >
           {ch === " " ? " " : ch}
         </span>

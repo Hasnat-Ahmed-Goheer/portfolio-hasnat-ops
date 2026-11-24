@@ -113,7 +113,7 @@ export default function LatentControls() {
           reset to baseline
         </button>
         {!live && (
-          <span className="font-mono text-[10px] text-muted/70">
+          <span className="font-mono text-[10px] text-muted">
             reduced-motion / no-WebGL — the field renders as a static gradient
           </span>
         )}
