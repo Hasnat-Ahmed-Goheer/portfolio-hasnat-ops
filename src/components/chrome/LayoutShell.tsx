@@ -122,6 +122,10 @@ export default function LayoutShell({ children }: { children: ReactNode }) {
     return () => clearTimeout(t);
   }, [pathname]);
 
+  /* redesign prototypes (/proto/*) render on their own: no boot screen,
+     canvas, nav or smooth scroll from the current design */
+  if (pathname.startsWith("/proto")) return <>{children}</>;
+
   const content = (
     <>
       <a

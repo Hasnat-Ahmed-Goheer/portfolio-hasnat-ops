@@ -169,7 +169,7 @@ export default function RootLayout({
         <script
           dangerouslySetInnerHTML={{
             __html:
-              "try{if(sessionStorage.getItem('ops-booted')==='1'||matchMedia('(prefers-reduced-motion: reduce)').matches){var c=document.getElementById('boot-cover');if(c)c.style.display='none';}}catch(e){}",
+              "try{if(location.pathname.indexOf('/proto')===0||sessionStorage.getItem('ops-booted')==='1'||matchMedia('(prefers-reduced-motion: reduce)').matches){var c=document.getElementById('boot-cover');if(c)c.style.display='none';}}catch(e){}",
           }}
         />
         <LayoutShell>{children}</LayoutShell>
