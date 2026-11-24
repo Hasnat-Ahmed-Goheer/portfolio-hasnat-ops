@@ -229,6 +229,7 @@ export default function HomeSections() {
           </p>
           <h1
             data-hero
+            aria-label={profile.name}
             className="max-w-4xl text-5xl font-medium leading-[1.04] tracking-tight sm:text-7xl"
           >
             <KineticName text={profile.name} />
@@ -348,9 +349,9 @@ export default function HomeSections() {
       <section className="relative px-5 py-28" aria-label="Subsystems">
         <div className="mx-auto max-w-6xl">
           <Reveal>
-            <p className="sys-label mb-10">
+            <h2 className="sys-label mb-10">
               <ScrollDecodeText text="select subsystem ▸" />
-            </p>
+            </h2>
           </Reveal>
           <div className="grid gap-4 md:grid-cols-3">
             {SUBSYSTEMS.map((s, i) => (
@@ -368,9 +369,9 @@ export default function HomeSections() {
                       />
                       <span>{s.sysId}</span>
                     </div>
-                    <p className="mt-4 text-4xl font-medium tracking-tight transition-colors duration-300 group-hover:text-accent group-focus-visible:text-accent">
+                    <h3 className="mt-4 text-4xl font-medium tracking-tight transition-colors duration-300 group-hover:text-accent group-focus-visible:text-accent">
                       {s.label}
-                    </p>
+                    </h3>
                     <p className="mt-3 font-mono text-xs leading-relaxed text-muted">
                       {s.desc}
                     </p>

@@ -89,13 +89,13 @@ export default function WorkIndex() {
                 >
                   {String(i + 1).padStart(2, "0")}
                 </span>
-                <span>
+                <div>
                   <span className="block font-mono text-xs text-muted">
                     {p.slug}
                   </span>
-                  <span className="mt-1 block text-2xl font-medium tracking-tight transition-colors group-hover:text-accent sm:text-3xl">
+                  <h2 className="mt-1 block text-2xl font-medium tracking-tight transition-colors group-hover:text-accent sm:text-3xl">
                     {p.title}
-                  </span>
+                  </h2>
                   <span className="mt-2 block text-sm text-muted">
                     {p.tagline}
                   </span>
@@ -109,7 +109,7 @@ export default function WorkIndex() {
                       </span>
                     ))}
                   </span>
-                </span>
+                </div>
                 <span className="hidden items-center gap-2 font-mono text-xs sm:flex">
                   <span
                     className={`status-dot h-2 w-2 rounded-full ${

@@ -113,9 +113,9 @@ export default function ContactForm() {
 
           <Reveal delay={0.1}>
             <div className="space-y-4 font-mono text-xs">
-              <p className="sys-label">
+              <h2 className="sys-label">
                 <ScrollDecodeText text="direct channels" />
-              </p>
+              </h2>
               <a href={`mailto:${profile.email}`} className="block text-text/85 hover:text-accent">
                 {profile.email}
               </a>

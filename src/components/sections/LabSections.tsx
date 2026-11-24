@@ -130,9 +130,9 @@ export default function LabSections() {
       <section className="relative px-5 py-16" aria-label="Inline terminal">
         <div className="mx-auto max-w-6xl">
           <Reveal>
-            <p className="sys-label mb-2">
+            <h2 className="sys-label mb-2">
               <ScrollDecodeText text="live shell" />
-            </p>
+            </h2>
             <p className="mb-6 font-mono text-xs text-muted">
               hint: try <span className="text-accent">ls -a</span> — discoveries
               unlock below ({found}/{EGGS.length})

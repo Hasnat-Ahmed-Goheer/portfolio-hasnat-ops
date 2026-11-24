@@ -11,7 +11,7 @@
  *     the draggable cluster's magnetism so the whole hero feels like one field.
  *
  * SSR / no-JS / reduced motion render the plain name (letters, no transform).
- * The accessible name lives on the wrapper's aria-label; letters are hidden.
+ * Letters are aria-hidden; the wrapping heading carries aria-label={text}.
  */
 import { useEffect, useRef } from "react";
 import { useUiStore } from "@/stores/uiStore";
@@ -49,6 +49,27 @@ export default function KineticName({
     let failsafe: ReturnType<typeof setTimeout> | undefined;
 
     const real = letters.map((l) => l.dataset.char ?? "");
+
+    /* pin every letter to its real glyph's width while scrambling. Glyphs
+       like █ and } are wider/narrower than the letters they replace, so
+       without this the line length changes every frame, the name re-wraps
+       ("Goheer" hops between lines) and Lighthouse counts it as layout shift
+       (CLS 0.17 on mobile). Measured once, while the real text is showing. */
+    if (!root.dataset.knPinned) {
+      letters.forEach((l) => {
+        l.style.width = `${l.getBoundingClientRect().width}px`;
+        l.style.textAlign = "center";
+      });
+      root.dataset.knPinned = "1";
+    }
+    const unpin = () => {
+      letters.forEach((l) => {
+        l.style.width = "";
+        l.style.textAlign = "";
+      });
+      delete root.dataset.knPinned;
+    };
+
     const setAll = (fn: (i: number) => string) =>
       letters.forEach((l, i) => {
         if (real[i] === " ") return;
@@ -63,6 +84,7 @@ export default function KineticName({
         const reveal = (frame / total) * letters.length;
         if (reveal >= letters.length) {
           setAll((i) => real[i]);
+          unpin();
           return;
         }
         setAll((i) => (i < reveal ? real[i] : glyph()));
@@ -183,7 +205,11 @@ export default function KineticName({
   }, []);
 
   return (
-    <span ref={rootRef} className={className} aria-label={text}>
+    /* letters are aria-hidden (inline-block spans read letter by letter in
+       some screen readers). Put aria-label={text} on the wrapping heading:
+       ARIA ignores it on this plain span, but honours it on a heading. */
+    <span ref={rootRef} className={className}>
+      <span aria-hidden="true">
       {text.split("").map((ch, i) => (
         <span
           key={i}
@@ -196,6 +222,7 @@ export default function KineticName({
           {ch === " " ? " " : ch}
         </span>
       ))}
+      </span>
     </span>
   );
 }

@@ -119,13 +119,14 @@ export default function DecryptLens({
   }, [text]);
 
   return (
-    <span ref={rootRef} className={className} aria-label={text}>
+    /* letters are plain inline spans, so assistive tech and crawlers read
+       them as one run of text; no aria-label (ignored on a plain span) */
+    <span ref={rootRef} className={className}>
       {text.split("").map((ch, i) => (
         <span
           key={i}
           data-dl-char
           data-char={ch}
-          aria-hidden="true"
           style={ch === " " ? { whiteSpace: "pre" } : undefined}
         >
           {ch === " " ? " " : ch}

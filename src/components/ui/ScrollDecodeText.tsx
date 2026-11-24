@@ -100,7 +100,10 @@ export default function ScrollDecodeText({
   }, [text]);
 
   return (
-    <span ref={ref} className={className} aria-label={text}>
+    /* one copy of the text, no aria-label (ARIA ignores it on a plain span)
+       and no sr-only duplicate (crawlers would read it twice). The resting
+       state is always the real text, which is also what SSR emits. */
+    <span ref={ref} className={className}>
       {out}
     </span>
   );

@@ -262,7 +262,7 @@ export default function AboutSections() {
         <div className="flex min-h-screen items-center px-5 py-16">
           <div className="mx-auto w-full max-w-6xl">
             <div className="mb-10">
-              <p className="sys-label mb-2">latent space · skills index</p>
+              <h2 className="sys-label mb-2">latent space · skills index</h2>
               <p className="font-mono text-xs text-muted">
                 scroll to scan the field — hover a cluster to excite it ·{" "}
                 <span ref={progressRef} className="text-accent">
@@ -463,18 +463,18 @@ export default function AboutSections() {
       <section className="relative border-t hairline px-5 py-28" aria-label="Values">
         <div className="mx-auto max-w-6xl">
           <Reveal>
-            <p className="sys-label mb-10">
+            <h2 className="sys-label mb-10">
               <ScrollDecodeText text="operating principles" />
-            </p>
+            </h2>
           </Reveal>
           <div className="grid gap-4 md:grid-cols-3">
             {VALUES.map((v, i) => (
               <Reveal key={v.title} delay={i * 0.08}>
                 <div className="h-full rounded-lg border hairline bg-elev/50 p-8">
                   <p className="font-mono text-xs text-accent">0{i + 1}</p>
-                  <p className="mt-3 text-xl font-medium tracking-tight">
+                  <h3 className="mt-3 text-xl font-medium tracking-tight">
                     {v.title}
-                  </p>
+                  </h3>
                   <p className="mt-3 text-sm leading-relaxed text-muted">
                     {v.body}
                   </p>
@@ -490,7 +490,7 @@ export default function AboutSections() {
         <div className="mx-auto max-w-6xl">
           <Reveal>
             <div className="mb-8 flex items-baseline justify-between gap-4">
-              <p className="sys-label">recent eventlog</p>
+              <h2 className="sys-label">recent eventlog</h2>
               <Link
                 href="/experience"
                 className="font-mono text-xs text-accent transition-opacity hover:opacity-70"
@@ -504,7 +504,7 @@ export default function AboutSections() {
               <Reveal key={e.company} delay={i * 0.05}>
                 <div className="flex flex-col gap-1 border-b hairline py-5 sm:flex-row sm:items-baseline sm:justify-between">
                   <div>
-                    <p className="font-medium">{e.company}</p>
+                    <h3 className="font-medium">{e.company}</h3>
                     <p className="text-sm text-muted">{e.role}</p>
                   </div>
                   <p className="shrink-0 font-mono text-xs text-muted">
@@ -522,12 +522,12 @@ export default function AboutSections() {
       <section className="relative border-t hairline px-5 py-16" aria-label="Education">
         <div className="mx-auto max-w-6xl">
           <Reveal>
-            <p className="sys-label mb-6">
+            <h2 className="sys-label mb-6">
               <ScrollDecodeText text="education" />
-            </p>
+            </h2>
             <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
               <div>
-                <p className="text-lg font-medium">{profile.education.institution}</p>
+                <h3 className="text-lg font-medium">{profile.education.institution}</h3>
                 <p className="text-sm text-muted">{profile.education.degree} · CGPA: {profile.education.gpa}</p>
               </div>
               <p className="shrink-0 font-mono text-xs text-muted">{profile.education.period}</p>
