@@ -21,6 +21,8 @@ import { projectsForSkill } from "@/lib/skillMatch";
 import Reveal from "@/components/ui/Reveal";
 import DecodeText from "@/components/ui/DecodeText";
 import ScrollDecodeText from "@/components/ui/ScrollDecodeText";
+import CountUp from "@/components/ui/CountUp";
+import ScrubText from "@/components/ui/ScrubText";
 
 /** scannable impact ledger — numbers a hiring manager skims (from the resume) */
 const METRICS = [
@@ -192,7 +194,7 @@ export default function AboutSections() {
               <Reveal key={m.value} delay={i * 0.06}>
                 <div className="h-full rounded-lg border hairline bg-elev/85 p-6 backdrop-blur-sm">
                   <p className="font-mono text-3xl font-medium text-accent">
-                    {m.value}
+                    <CountUp value={m.value} />
                   </p>
                   <p className="mt-2 text-sm leading-relaxed text-muted">
                     {m.label}
@@ -228,11 +230,11 @@ export default function AboutSections() {
         <div className="mx-auto grid max-w-6xl gap-10 md:grid-cols-[1fr_280px]">
           <div className="space-y-8">
             {profile.longBio.map((p, i) => (
-              <Reveal key={i}>
-                <p className="max-w-2xl text-lg leading-relaxed text-text/90 sm:text-xl">
-                  {p}
-                </p>
-              </Reveal>
+              <ScrubText
+                key={i}
+                text={p}
+                className="max-w-2xl text-lg leading-relaxed text-text sm:text-xl"
+              />
             ))}
           </div>
           <div className="hidden space-y-6 font-mono text-xs text-muted md:block">

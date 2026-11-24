@@ -13,6 +13,8 @@ import type { Project } from "@/content/types";
 import { useSceneStore } from "@/stores/sceneStore";
 import Reveal from "@/components/ui/Reveal";
 import ScrollDecodeText from "@/components/ui/ScrollDecodeText";
+import ScrubText from "@/components/ui/ScrubText";
+import ClipReveal from "@/components/ui/ClipReveal";
 
 export default function CaseStudy({ project }: { project: Project }) {
   const setMotif = useSceneStore((s) => s.setMotif);
@@ -85,10 +87,11 @@ export default function CaseStudy({ project }: { project: Project }) {
             <h2 className="sys-label mb-6">
               <ScrollDecodeText text="problem" />
             </h2>
-            <p className="max-w-3xl text-2xl font-medium leading-snug tracking-tight sm:text-4xl">
-              {project.problem}
-            </p>
           </Reveal>
+          <ScrubText
+            text={project.problem}
+            className="max-w-3xl text-2xl font-medium leading-snug tracking-tight sm:text-4xl"
+          />
         </div>
       </section>
 
@@ -122,7 +125,7 @@ export default function CaseStudy({ project }: { project: Project }) {
             </Reveal>
             <div className="grid gap-6 md:grid-cols-2 [&>*]:min-w-0">
               {project.media.map((m, i) => (
-                <Reveal key={m.src + i} delay={i * 0.08}>
+                <ClipReveal key={m.src + i} delay={(i % 2) * 0.12}>
                   <figure className="group overflow-hidden rounded-lg border hairline bg-elev/60 transition-colors hover:border-accent/40">
                     <figcaption className="flex items-center gap-2 border-b hairline px-4 py-2.5 font-mono text-[11px] text-muted">
                       <span className="flex gap-1.5" aria-hidden="true">
@@ -137,6 +140,7 @@ export default function CaseStudy({ project }: { project: Project }) {
                         tidy and nothing distorts */}
                     {/* next/image: serves AVIF/WebP at the rendered width instead
                         of the full-size original (one capture is a 1 MB PNG) */}
+                    <div data-clip-zoom className="overflow-hidden">
                     <Image
                       src={m.src}
                       alt={m.alt}
@@ -145,8 +149,9 @@ export default function CaseStudy({ project }: { project: Project }) {
                       sizes="(min-width: 1152px) 560px, (min-width: 768px) 50vw, 100vw"
                       className="block aspect-[16/10] w-full object-cover object-top transition-transform duration-500 ease-out group-hover:scale-[1.02]"
                     />
+                    </div>
                   </figure>
-                </Reveal>
+                </ClipReveal>
               ))}
             </div>
           </div>
