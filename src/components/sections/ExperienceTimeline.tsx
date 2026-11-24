@@ -39,6 +39,26 @@ export default function ExperienceTimeline() {
           },
         }
       );
+      /* each commit dot switches on as the drawn line reaches its entry */
+      lineWrap.current
+        ?.querySelectorAll<HTMLElement>("[data-dot]")
+        .forEach((dot) => {
+          gsap.fromTo(
+            dot,
+            { scale: 0.4, opacity: 0.35 },
+            {
+              scale: 1,
+              opacity: 1,
+              duration: 0.5,
+              ease: "back.out(3)",
+              scrollTrigger: {
+                trigger: dot,
+                start: "top 65%",
+                toggleActions: "play none none reverse",
+              },
+            }
+          );
+        });
     },
     { scope: lineWrap }
   );
@@ -80,12 +100,14 @@ export default function ExperienceTimeline() {
               return (
                 <li key={`${e.company}-${e.start}`} className="relative">
                   <span
+                    data-dot
                     aria-hidden="true"
                     className={`absolute left-2 top-2 h-2.5 w-2.5 -translate-x-1/2 rounded-full md:left-1/2 ${
                       e.end === "present" ? "bg-ok status-dot" : "bg-accent/70"
                     }`}
                   />
                   <Reveal
+                    x={right ? 36 : -36}
                     className={`ml-8 md:ml-0 md:w-[calc(50%-2.5rem)] ${
                       right ? "md:ml-[calc(50%+2.5rem)]" : ""
                     }`}

@@ -8,6 +8,8 @@ import { useUiStore } from "@/stores/uiStore";
 interface RevealProps {
   children: ReactNode;
   y?: number;
+  /** horizontal offset to slide in from (px, negative = from the left) */
+  x?: number;
   delay?: number;
   className?: string;
 }
@@ -15,6 +17,7 @@ interface RevealProps {
 export default function Reveal({
   children,
   y = 28,
+  x = 0,
   delay = 0,
   className,
 }: RevealProps) {
@@ -27,6 +30,7 @@ export default function Reveal({
       gsap.from(ref.current, {
         opacity: 0,
         y,
+        x,
         duration: 1,
         delay,
         scrollTrigger: { trigger: ref.current, start: "top 88%", once: true },

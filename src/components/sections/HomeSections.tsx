@@ -18,6 +18,8 @@ import KineticName from "@/components/ui/KineticName";
 import DecryptLens from "@/components/ui/DecryptLens";
 import ScrollDecodeText from "@/components/ui/ScrollDecodeText";
 import Magnetic from "@/components/ui/Magnetic";
+import CountUp from "@/components/ui/CountUp";
+import VelocityMarquee from "@/components/ui/VelocityMarquee";
 import ClusterTouchControl from "@/scenes/cluster/ClusterTouchControl";
 import HeroTerminal from "@/components/sections/HeroTerminal";
 
@@ -43,10 +45,16 @@ const STATEMENTS = [
 ];
 
 const STATS = [
-  { value: 2, suffix: "+", label: "years in production" },
-  { value: 15, suffix: "+", label: "environments, one control plane" },
-  { value: 10, suffix: "+", label: "helm charts authored" },
-  { value: 200, prefix: "sub-", suffix: "ms", label: "p95 message latency" },
+  { value: "2+", label: "years in production" },
+  { value: "15+", label: "environments, one control plane" },
+  { value: "10+", label: "helm charts authored" },
+  { value: "sub-200ms", label: "p95 message latency" },
+];
+
+/* the ticker band: the stack, in the order a request travels through it */
+const STACK_TICKER = [
+  "Kubernetes", "Helm", "Rancher", "FastAPI", "NestJS", "Node.js",
+  "Next.js", "React", "MongoDB", "Pinecone", "Gemini", "RAG", "Stripe Connect",
 ];
 
 const SUBSYSTEMS = [
@@ -54,54 +62,6 @@ const SUBSYSTEMS = [
   { href: "/experience", label: "LOG", desc: "replay the event history", sysId: "sys.eventlog" },
   { href: "/contact", label: "UPLINK", desc: "open a connection", sysId: "sys.uplink" },
 ];
-
-function Counter({ value, prefix = "", suffix = "" }: { value: number; prefix?: string; suffix?: string }) {
-  const ref = useRef<HTMLSpanElement>(null);
-  /* The resting text is the REAL value (SSR + no-JS + reduced-motion all show
-     "2+ years" / "sub-200ms", never the old "0+ years" / "sub-0ms" that read
-     as broken data in the fetched DOM — a credibility-killer an Awwwards judge
-     spots instantly). The count-up is a pure enhancement: on first scroll-into-
-     view we briefly seed 0 and tween up to the real value, then settle exactly.
-     Driven by IntersectionObserver, NOT ScrollTrigger — this band sits below a
-     pinned scrub whose pin-spacer shifts its Y by 220vh, so a ScrollTrigger
-     start computed against stale layout could be missed on refresh; IO fires on
-     real intersection regardless of layout math. */
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const final = `${prefix}${value}${suffix}`;
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      el.textContent = final;
-      return;
-    }
-    let tween: gsap.core.Tween | null = null;
-    const io = new IntersectionObserver(
-      (entries) => {
-        if (!entries[0]?.isIntersecting) return;
-        io.disconnect();
-        const obj = { v: 0 };
-        tween = gsap.to(obj, {
-          v: value,
-          duration: 1.6,
-          ease: "power2.out",
-          onUpdate: () => {
-            el.textContent = `${prefix}${Math.round(obj.v)}${suffix}`;
-          },
-          onComplete: () => {
-            el.textContent = final;
-          },
-        });
-      },
-      { threshold: 0.4 }
-    );
-    io.observe(el);
-    return () => {
-      io.disconnect();
-      tween?.kill();
-    };
-  }, [value, prefix, suffix]);
-  return <span ref={ref}>{`${prefix}${value}${suffix}`}</span>;
-}
 
 export default function HomeSections() {
   const booted = useUiStore((s) => s.booted);
@@ -337,12 +297,18 @@ export default function HomeSections() {
           {STATS.map((s) => (
             <Reveal key={s.label} className="px-5 py-10">
               <p className="font-mono text-3xl text-accent sm:text-4xl">
-                <Counter value={s.value} prefix={s.prefix} suffix={s.suffix} />
+                <CountUp value={s.value} />
               </p>
               <p className="mt-2 font-mono text-xs text-muted">{s.label}</p>
             </Reveal>
           ))}
         </div>
+      </section>
+
+      {/* beat 4.5 — stack ticker: drifts on its own, speeds up and leans
+          with the scroll */}
+      <section aria-label="Stack" className="relative">
+        <VelocityMarquee items={STACK_TICKER} label="Production stack" />
       </section>
 
       {/* beat 5 — subsystem hand-off */}

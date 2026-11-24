@@ -21,6 +21,8 @@ import SceneScrim from "./SceneScrim";
 import Footer from "./Footer";
 import Cursor from "./Cursor";
 import ScrollProgress from "./ScrollProgress";
+import SectionTracker from "./SectionTracker";
+import BackToTop from "./BackToTop";
 import HoverTip from "./HoverTip";
 import Toasts from "./Toasts";
 import TelemetryHud from "./TelemetryHud";
@@ -136,8 +138,9 @@ export default function LayoutShell({ children }: { children: ReactNode }) {
       <SceneScrim />
       <Nav />
       <ScrollProgress />
+      <SectionTracker />
       <HoverTip />
-      <main id="main" className="relative z-10">{children}</main>
+      <main id="main" tabIndex={-1} className="relative z-10 outline-none">{children}</main>
       <Footer />
       <Terminal mode="palette" />
       <CommandPalette />
@@ -145,6 +148,7 @@ export default function LayoutShell({ children }: { children: ReactNode }) {
       <TelemetryHud />
       <Toasts />
       <Cursor />
+      <BackToTop />
       {/* mobile terminal launcher (keybinds need a keyboard) */}
       <button
         onClick={() => setOpen(true)}
