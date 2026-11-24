@@ -1,7 +1,7 @@
 import type { MetadataRoute } from "next";
 import { projects } from "@/content/projects";
 
-const SITE = process.env.NEXT_PUBLIC_SITE_URL ?? "https://hasnat.dev";
+import { SITE_URL as SITE } from "@/lib/site";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const pages = ["", "/about", "/work", "/experience", "/lab", "/contact"].map(

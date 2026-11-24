@@ -10,7 +10,7 @@ import {
   Preview,
   Section,
   Text,
-} from "@react-email/components";
+} from "react-email";
 import { profile } from "@/content/profile";
 import {
   emailColors as c,

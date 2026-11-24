@@ -16,7 +16,7 @@ export const runtime = "nodejs";
  */
 const schema = z.object({
   name: z.string().trim().min(1).max(120),
-  email: z.string().trim().email().max(200),
+  email: z.string().trim().pipe(z.email().max(200)),
   message: z.string().trim().min(1).max(5000),
   company: z.string().optional(), // honeypot
 });
