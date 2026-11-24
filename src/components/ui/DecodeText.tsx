@@ -76,7 +76,10 @@ export default function DecodeText({
   }, [text, visible, booted]);
 
   return (
-    <span className={className} aria-label={text}>
+    /* one copy of the text, no aria-label (ARIA ignores it on a plain span)
+       and no sr-only duplicate (crawlers would read it twice). The resting
+       state is always the real text, which is also what SSR emits. */
+    <span className={className}>
       {out}
     </span>
   );

@@ -106,30 +106,36 @@ export default function BootSequence() {
         fading ? "opacity-0" : "opacity-100"
       }`}
     >
+      {/* Every line (and the status row) is rendered from the first frame;
+          lines not printed yet are visibility:hidden so they still hold their
+          space. The block is vertically centred, so letting it grow line by
+          line pushed everything up on each print, which Lighthouse counted as
+          six layout shifts. Same look, constant height. */}
       <div className="w-full max-w-xl px-6 font-mono text-sm leading-relaxed">
-        {bootLines.slice(0, count).map((line, i) => (
+        {bootLines.map((line, i) => (
           <div
             key={i}
-            className={
+            className={`relative ${
               line.startsWith("[ ok ]")
                 ? "text-ok"
                 : i === 0
                   ? "text-accent"
                   : "text-text/85"
-            }
+            }`}
           >
-            {line}
+            <span className={i < count ? undefined : "invisible"}>{line}</span>
+            {i === count && !linesDone && (
+              <span className="caret absolute left-0 top-0 text-text/85" />
+            )}
           </div>
         ))}
-        {linesDone &&
-          (sceneReady ? (
-            <div className="text-ok">[ ok ] render online</div>
-          ) : (
-            <div className="text-accent2">
-              [ .. ] warming render pipeline<span className="caret" />
-            </div>
-          ))}
-        {!linesDone && <div className="caret text-text/85" />}
+        {linesDone && sceneReady ? (
+          <div className="text-ok">[ ok ] render online</div>
+        ) : (
+          <div className={`text-accent2 ${linesDone ? "" : "invisible"}`}>
+            [ .. ] warming render pipeline<span className="caret" />
+          </div>
+        )}
         <button
           onClick={finish}
           className="mt-8 text-xs text-muted hover:text-text"

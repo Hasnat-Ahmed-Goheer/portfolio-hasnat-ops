@@ -7,6 +7,7 @@
  */
 import { useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { projects } from "@/content/projects";
 import type { Project } from "@/content/types";
 import { useSceneStore } from "@/stores/sceneStore";
@@ -81,9 +82,9 @@ export default function CaseStudy({ project }: { project: Project }) {
       <section className="relative border-t hairline px-5 py-24" aria-label="Problem">
         <div className="mx-auto max-w-6xl">
           <Reveal>
-            <p className="sys-label mb-6">
+            <h2 className="sys-label mb-6">
               <ScrollDecodeText text="problem" />
-            </p>
+            </h2>
             <p className="max-w-3xl text-2xl font-medium leading-snug tracking-tight sm:text-4xl">
               {project.problem}
             </p>
@@ -95,7 +96,7 @@ export default function CaseStudy({ project }: { project: Project }) {
       <section className="relative px-5 py-10" aria-label="Architecture">
         <div className="mx-auto max-w-6xl">
           <Reveal>
-            <p className="sys-label mb-8">architecture · build log</p>
+            <h2 className="sys-label mb-8">architecture · build log</h2>
           </Reveal>
           <div className="max-w-3xl space-y-5">
             {project.architecture.map((a, i) => (
@@ -117,7 +118,7 @@ export default function CaseStudy({ project }: { project: Project }) {
         <section className="relative px-5 py-24" aria-label="Visuals">
           <div className="mx-auto max-w-6xl">
             <Reveal>
-              <p className="sys-label mb-8">attached media</p>
+              <h2 className="sys-label mb-8">attached media</h2>
             </Reveal>
             <div className="grid gap-6 md:grid-cols-2">
               {project.media.map((m, i) => (
@@ -134,12 +135,14 @@ export default function CaseStudy({ project }: { project: Project }) {
                     {/* real product captures at varied native ratios — pin a
                         uniform 16:10 window and cover-crop so the grid stays
                         tidy and nothing distorts */}
-                    <img
+                    {/* next/image: serves AVIF/WebP at the rendered width instead
+                        of the full-size original (one capture is a 1 MB PNG) */}
+                    <Image
                       src={m.src}
                       alt={m.alt}
                       width={1280}
                       height={800}
-                      loading="lazy"
+                      sizes="(min-width: 1152px) 560px, (min-width: 768px) 50vw, 100vw"
                       className="block aspect-[16/10] w-full object-cover object-top transition-transform duration-500 ease-out group-hover:scale-[1.02]"
                     />
                   </figure>
@@ -154,9 +157,9 @@ export default function CaseStudy({ project }: { project: Project }) {
       <section className="relative px-5 py-24" aria-label="Outcome">
         <div className="mx-auto max-w-6xl">
           <Reveal>
-            <p className="sys-label mb-8">
+            <h2 className="sys-label mb-8">
               <ScrollDecodeText text="outcome" />
-            </p>
+            </h2>
           </Reveal>
           <div className="max-w-3xl space-y-4">
             {project.outcomes.map((o, i) => (

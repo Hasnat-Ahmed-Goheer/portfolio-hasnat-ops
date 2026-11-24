@@ -97,9 +97,9 @@ export default function ExperienceTimeline() {
                           <span className="ml-2 text-ok">● active</span>
                         )}
                       </p>
-                      <p className="mt-2 text-xl font-medium tracking-tight">
+                      <h2 className="mt-2 text-xl font-medium tracking-tight">
                         {e.role}
-                      </p>
+                      </h2>
                       <p className="font-mono text-xs text-accent">
                         {e.company}
                       </p>

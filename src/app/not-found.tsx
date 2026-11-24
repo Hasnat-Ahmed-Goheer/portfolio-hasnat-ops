@@ -1,5 +1,13 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import DecodeText from "@/components/ui/DecodeText";
+
+/* without this, 404s inherit the root layout's robots "index, follow",
+   contradicting the noindex Next adds — mixed signals to crawlers */
+export const metadata: Metadata = {
+  title: "404 — route not found",
+  robots: { index: false, follow: true },
+};
 
 const LOG = [
   ["[ .. ]", "resolving route against service registry"],
