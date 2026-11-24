@@ -1,12 +1,8 @@
 import type { Metadata } from "next";
+import { metadataFor } from "@/lib/seo";
 import LabSections from "@/components/sections/LabSections";
 
-export const metadata: Metadata = {
-  title: "Lab",
-  alternates: { canonical: "/lab" },
-  description:
-    "The sandbox — experiments, shader sketches, and a terminal with secrets.",
-};
+export const metadata: Metadata = metadataFor("lab");
 
 export default function LabPage() {
   return <LabSections />;

@@ -10,7 +10,7 @@ import {
   Preview,
   Section,
   Text,
-} from "@react-email/components";
+} from "react-email";
 import { emailColors as c, emailMono as mono, emailSans as sans } from "./theme";
 
 /**

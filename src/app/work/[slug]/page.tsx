@@ -3,8 +3,9 @@ import { notFound } from "next/navigation";
 import { projects, getProject } from "@/content/projects";
 import { profile } from "@/content/profile";
 import CaseStudy from "@/components/sections/CaseStudy";
+import { pageMetadata } from "@/lib/seo";
 
-const SITE = process.env.NEXT_PUBLIC_SITE_URL ?? "https://hasnat.dev";
+import { SITE_URL as SITE } from "@/lib/site";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -18,28 +19,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const p = getProject(slug);
   if (!p) return {};
-  const url = `/work/${slug}`;
-  /* lead the case study's own screenshot as the share image so each project
-     gets a distinct, on-brand link preview (falls back to the site OG image) */
-  const images = p.media?.length ? p.media.map((m) => m.src) : undefined;
-  return {
+  /* share image: ./opengraph-image.tsx renders a branded card with the case
+     study's own screenshot, so each project gets a distinct link preview */
+  return pageMetadata({
     title: p.title,
     description: p.tagline,
-    alternates: { canonical: url },
-    openGraph: {
-      type: "article",
-      title: p.title,
-      description: p.tagline,
-      url,
-      images,
-    },
-    twitter: {
-      card: "summary_large_image",
-      title: p.title,
-      description: p.tagline,
-      images,
-    },
-  };
+    path: `/work/${slug}`,
+    type: "article",
+  });
 }
 
 export default async function ProjectPage({ params }: Props) {

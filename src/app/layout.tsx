@@ -6,55 +6,137 @@ import "./globals.css";
 import LayoutShell from "@/components/chrome/LayoutShell";
 import { profile } from "@/content/profile";
 import { lexicon } from "@/config/console";
+import { experience } from "@/content/experience";
+import { skillGroups } from "@/content/skills";
+import { SITE_URL } from "@/lib/site";
 
-const SITE = process.env.NEXT_PUBLIC_SITE_URL ?? "https://hasnat.dev";
+const SITE = SITE_URL;
+const DEFAULT_TITLE = `${profile.name} — ${profile.role}`;
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE),
   title: {
-    default: `${lexicon.systemName} — ${profile.name}, ${profile.role}`,
-    template: `%s — ${lexicon.systemName}`,
+    default: DEFAULT_TITLE,
+    template: `%s — ${profile.name}`,
   },
   description: profile.shortBio,
+  applicationName: lexicon.systemName,
+  authors: [{ name: profile.name, url: SITE }],
+  creator: profile.name,
+  publisher: profile.name,
   alternates: { canonical: "/" },
   keywords: [
-    "Full Stack Engineer",
+    profile.name,
+    "Hasnat Ahmed",
+    "Full Stack Software Engineer",
+    "Full Stack Developer Pakistan",
+    "Software Engineer Islamabad",
     "Kubernetes",
     "Helm",
+    "Rancher",
     "Next.js",
+    "React",
     "NestJS",
+    "FastAPI",
     "AI",
     "RAG",
     "FinTech",
+    "Portfolio",
   ],
+  category: "technology",
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+      "max-video-preview": -1,
+    },
+  },
   openGraph: {
-    title: `${lexicon.systemName} — ${profile.name}`,
+    type: "profile",
+    title: DEFAULT_TITLE,
     description: profile.shortBio,
-    url: SITE,
+    url: "/",
     siteName: lexicon.systemName,
-    type: "website",
+    locale: "en_US",
+    firstName: profile.name.split(" ")[0],
+    lastName: profile.name.split(" ").slice(1).join(" "),
+    username: profile.handle,
   },
   twitter: {
     card: "summary_large_image",
-    title: `${lexicon.systemName} — ${profile.name}`,
+    title: DEFAULT_TITLE,
     description: profile.shortBio,
   },
+  formatDetection: { telephone: false, address: false, email: false },
+  /* Google Search Console: set GOOGLE_SITE_VERIFICATION to the meta-tag token */
+  ...(process.env.GOOGLE_SITE_VERIFICATION
+    ? { verification: { google: process.env.GOOGLE_SITE_VERIFICATION } }
+    : {}),
 };
 
 export const viewport: Viewport = {
   themeColor: "#0a0e14",
+  colorScheme: "dark",
 };
 
-const personJsonLd = {
+/* structured data — who this site is about, and the site itself. Lets Google
+   build a rich result / knowledge panel for searches on the name. */
+const sameAs = profile.socials
+  .filter((s) => s.href.startsWith("http"))
+  .map((s) => s.href);
+
+const structuredData = {
   "@context": "https://schema.org",
-  "@type": "Person",
-  name: profile.name,
-  jobTitle: profile.role,
-  email: profile.email,
-  url: SITE,
-  sameAs: profile.socials
-    .filter((s) => s.href.startsWith("http"))
-    .map((s) => s.href),
+  "@graph": [
+    {
+      "@type": "Person",
+      "@id": `${SITE}/#person`,
+      name: profile.name,
+      alternateName: "Hasnat Ahmed",
+      jobTitle: profile.role,
+      description: profile.shortBio,
+      email: `mailto:${profile.email}`,
+      url: SITE,
+      image: `${SITE}/opengraph-image`,
+      sameAs,
+      address: {
+        "@type": "PostalAddress",
+        addressLocality: "Islamabad",
+        addressCountry: "PK",
+      },
+      alumniOf: {
+        "@type": "CollegeOrUniversity",
+        name: profile.education.institution,
+      },
+      worksFor: {
+        "@type": "Organization",
+        name: experience[0].company.split(" — ")[0],
+      },
+      knowsAbout: skillGroups.flatMap((g) => g.skills),
+    },
+    {
+      "@type": "WebSite",
+      "@id": `${SITE}/#website`,
+      url: SITE,
+      name: lexicon.systemName,
+      description: profile.shortBio,
+      inLanguage: "en",
+      author: { "@id": `${SITE}/#person` },
+      publisher: { "@id": `${SITE}/#person` },
+    },
+    {
+      "@type": "ProfilePage",
+      "@id": `${SITE}/#profilepage`,
+      url: SITE,
+      name: DEFAULT_TITLE,
+      isPartOf: { "@id": `${SITE}/#website` },
+      mainEntity: { "@id": `${SITE}/#person` },
+    },
+  ],
 };
 
 export default function RootLayout({
@@ -70,7 +152,7 @@ export default function RootLayout({
       <body className="antialiased">
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(personJsonLd) }}
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
         />
         {/* first-paint shield (see #boot-cover in globals.css): present in the
             SSR HTML so frame 0 is dark, never the bare page */}
